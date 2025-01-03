@@ -26,6 +26,17 @@ string_ptr = u0
 .proc main
 
 	jsr Tokenizer::parse
+	
+	; check for error flag
+	beq :+
+
+	; print tokenizer error
+	lda #<tokenizer_error_label
+	sta string_ptr
+	lda #>tokenizer_error_label
+	sta string_ptr+1
+	jsr print_string
+:
 	jsr print_tokens
 
 	rts
@@ -164,6 +175,7 @@ string_ptr = u0
 
 .segment "DATA"
 
+tokenizer_error_label: .literal $1c,"TOKENIZER ERROR!",$05,$0d,0
 opcode_label: .literal "OPCODE",0
 directive_label: .literal "DIRECTIVE",0
 numeric_literal_label: .literal "NUMERIC LITERAL",0

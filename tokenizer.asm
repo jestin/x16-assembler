@@ -157,7 +157,7 @@ tokenizer_state_jump_table_hi:
 	rts ; exit immediately
 
 @error:
-	lda #STATE_END_OF_CODE
+	lda #STATE_ERROR
 	sta state
 	rts ; exit immediately
 
@@ -193,6 +193,9 @@ tokenizer_state_jump_table_hi:
 	pla
 	pla
 
+	; set the Z flag to zero to indicate success
+	lda #0 ; 
+
 	; this should now return to whomever called tokenizer
 	rts
 .endproc
@@ -200,9 +203,12 @@ tokenizer_state_jump_table_hi:
 .proc error_state
 	; pull the top of the loop off the stack so that rts returns from the
 	; tokenizer
-	stp
 	pla
 	pla
+
+	; set the Z flag to 1 to indicate failure
+	lda #1 ; 
+
 	rts
 .endproc
 
@@ -284,7 +290,7 @@ tokenizer_state_jump_table_hi:
 .segment "DATA"
 
 test_syntax:
-.literal "2+3",0
+.literal "2 +3",0
 
 .endif ; TOKENIZER_ASM
 
