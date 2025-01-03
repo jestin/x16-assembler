@@ -116,14 +116,13 @@ tokenizer_state_jump_table_hi:
 
 	; read the next character (it will still need to be read later)
 	lda (code_ptr)
+	beq @end_of_code
 	
 	; TODO: check for invalid first characters for tokens
 
 	; determine next state by the first character (when possible)
 
 	; check for the end of the code
-	cmp #0
-	beq @end_of_code
 
 	; check for whitespace
 	jsr check_whitespace
@@ -147,10 +146,21 @@ tokenizer_state_jump_table_hi:
 	bra @error
 
 @numeric_literal:
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_NUMERIC_LITERAL
+	sta (token_type_ptr),y
+	
+	; update the state
 	lda #STATE_NUMERIC_LITERAL
 	sta state
 	bra @end
 @operator:
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_OPERATOR
+	sta (token_type_ptr),y
+	
 	lda #STATE_OPERATOR
 	sta state
 	bra @end
@@ -219,6 +229,7 @@ tokenizer_state_jump_table_hi:
 .proc numeric_literal_state
 	; read the next character
 	lda (code_ptr)
+	beq @completed_numeric
 
 	; increment next character
 	; increment next token character
@@ -226,6 +237,11 @@ tokenizer_state_jump_table_hi:
 	bne :+
 	inc code_ptr+1
 :
+
+	; check that we are still a number 
+	jsr check_numeric
+	bcc @completed_numeric
+
 	; add to the current token
 	ldy #0
 	sta (token_char_ptr),y
@@ -236,17 +252,15 @@ tokenizer_state_jump_table_hi:
 	inc token_char_ptr+1
 :
 
-	; add the token type
-	ldy #0
-	lda #TOKEN_TYPE_NUMERIC_LITERAL
-	sta (token_type_ptr),y
-	
 	; increment next token character
 	inc token_type_ptr
 	bne :+
 	inc token_type_ptr+1
 :
-	
+	; return in the same state
+	rts
+
+@completed_numeric:
 	; set the state to COMPLETED TOKEN
 	lda #STATE_COMPLETED_TOKEN
 	sta state
@@ -256,6 +270,7 @@ tokenizer_state_jump_table_hi:
 .proc operator_state
 	; read the next character
 	lda (code_ptr)
+	beq @completed_operator
 
 	; increment next character
 	; increment next token character
@@ -263,6 +278,10 @@ tokenizer_state_jump_table_hi:
 	bne :+
 	inc code_ptr+1
 :
+	; check that we are still a number 
+	jsr check_operator
+	bcc @completed_operator
+
 	; add to the current token
 	ldy #0
 	sta (token_char_ptr),y
@@ -273,17 +292,13 @@ tokenizer_state_jump_table_hi:
 	inc token_char_ptr+1
 :
 
-	; add the token type
-	ldy #0
-	lda #TOKEN_TYPE_OPERATOR
-	sta (token_type_ptr),y
-	
 	; increment next token character
 	inc token_type_ptr
 	bne :+
 	inc token_type_ptr+1
 :
 
+@completed_operator:
 	lda #STATE_COMPLETED_TOKEN
 	sta state
 	rts
@@ -309,7 +324,7 @@ tokenizer_state_jump_table_hi:
 	clc
 	rts
 @whitespace:
-	sec
+	; carry will already be set if we get here
 	rts
 .endproc ; check_whitespace
 
@@ -338,7 +353,7 @@ tokenizer_state_jump_table_hi:
 	clc
 	rts
 @operator:
-	sec
+	; carry will already be set if we get here
 	rts
 .endproc ; check_operator
 
@@ -347,7 +362,7 @@ tokenizer_state_jump_table_hi:
 .segment "DATA"
 
 test_syntax:
-.literal "2 + 3",0
+.literal "24 + 345",0
 
 .endif ; TOKENIZER_ASM
 
