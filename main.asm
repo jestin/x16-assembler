@@ -36,9 +36,11 @@ string_ptr = u0
 	lda #>tokenizer_error_label
 	sta string_ptr+1
 	jsr print_string
+	bra @end
 :
 	jsr print_tokens
 
+@end:
 	rts
 .endproc
 

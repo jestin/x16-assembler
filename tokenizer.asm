@@ -22,6 +22,8 @@ TOKEN_TYPE_OPERATOR = 3
 ; store the current state of the state machine
 state: .res 1
 
+cur_token_length: .res 1
+
 ; the number of tokens
 token_count: .res 1
 
@@ -120,9 +122,7 @@ tokenizer_state_jump_table_hi:
 	
 	; TODO: check for invalid first characters for tokens
 
-	; determine next state by the first character (when possible)
-
-	; check for the end of the code
+	stz cur_token_length
 
 	; check for whitespace
 	jsr check_whitespace
@@ -134,7 +134,7 @@ tokenizer_state_jump_table_hi:
 :
 	rts
 @nonwhitespace:
-	jsr check_numeric
+	jsr check_numeric_start
 	bcc :+
 	bra @numeric_literal
 :
@@ -176,6 +176,11 @@ tokenizer_state_jump_table_hi:
 	rts ; exit immediately
 
 @end:
+	; increment next token character
+	inc token_type_ptr
+	bne :+
+	inc token_type_ptr+1
+:
 	rts
 .endproc
 
@@ -238,9 +243,37 @@ tokenizer_state_jump_table_hi:
 	inc code_ptr+1
 :
 
-	; check that we are still a number 
+	; check if we are a format prefix
+	jsr check_number_prefix
+	bcc @check_numeric
+
+	; check if we are the first character in the token, otherwise error
+	pha
+	lda cur_token_length
+	bne @format_not_at_start_error
+	pla
+	bra @add_to_token
+
+@check_numeric:
+	; check if we are a number
 	jsr check_numeric
-	bcc @completed_numeric
+	bcs @add_to_token
+
+	; here we are neither a numeric, a prefix, nor the end of code
+	; we should only end with end of code, whitespace, or an operator
+
+	jsr check_whitespace
+	bcs @completed_numeric
+
+	jsr check_operator
+	bcs @completed_with_operator
+
+	; we are now in an error condition
+	bra @error
+
+@add_to_token:
+	; increment current token length
+	inc cur_token_length
 
 	; add to the current token
 	ldy #0
@@ -251,18 +284,25 @@ tokenizer_state_jump_table_hi:
 	bne :+
 	inc token_char_ptr+1
 :
-
-	; increment next token character
-	inc token_type_ptr
-	bne :+
-	inc token_type_ptr+1
-:
 	; return in the same state
 	rts
-
+@completed_with_operator:
+	; need to decrement the code_ptr
+	lda code_ptr
+	bne :+
+	dec code_ptr+1
+:
+	dec code_ptr
 @completed_numeric:
 	; set the state to COMPLETED TOKEN
 	lda #STATE_COMPLETED_TOKEN
+	sta state
+	rts
+@format_not_at_start_error:
+	pla
+@error:
+	; set the state to ERROR
+	lda #STATE_ERROR
 	sta state
 	rts
 .endproc
@@ -290,12 +330,6 @@ tokenizer_state_jump_table_hi:
 	inc token_char_ptr
 	bne :+
 	inc token_char_ptr+1
-:
-
-	; increment next token character
-	inc token_type_ptr
-	bne :+
-	inc token_type_ptr+1
 :
 
 @completed_operator:
@@ -340,6 +374,41 @@ tokenizer_state_jump_table_hi:
 	rts
 .endproc ; check_numeric
 
+.proc check_numeric_start
+
+	jsr check_numeric
+	bcc :+
+	; it is 0-9, so return with carry set (from the above jsr)
+	rts
+:
+	jsr check_number_prefix
+	bcc @not_prefix
+	rts
+@not_prefix:
+	rts
+
+@format_prefix:
+	; carry will already be set if we get here
+	rts
+
+.endproc ; check_numeric_start
+
+.proc check_number_prefix
+	; check for hex prefix
+	cmp #$24
+	beq @format_prefix
+	; check for binary prefix
+	cmp #$25
+	beq @format_prefix
+
+	; neither a prefix nor numeric
+	clc
+	rts
+@format_prefix:
+	; carry will already be set if we get here
+	rts
+.endproc ;check_number_prefix
+
 .proc check_operator
 	; check for operator
 	cmp #$2a ; PETSCII *
@@ -350,6 +419,8 @@ tokenizer_state_jump_table_hi:
 	beq @operator
 	cmp #$2f ; PETSCII -
 	beq @operator
+
+	; not an operator
 	clc
 	rts
 @operator:
@@ -362,7 +433,7 @@ tokenizer_state_jump_table_hi:
 .segment "DATA"
 
 test_syntax:
-.literal "24 + 345",0
+.literal "%24 + $345-1",0
 
 .endif ; TOKENIZER_ASM
 
