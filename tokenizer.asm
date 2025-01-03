@@ -1,6 +1,8 @@
 .ifndef TOKENIZER_ASM
 TOKENIZER_ASM = 1
 
+.scope Tokenizer
+
 .segment "BSS"
 
 ; states of the state machine
@@ -11,6 +13,12 @@ STATE_ERROR = 3
 STATE_NUMERIC_LITERAL = 4
 STATE_OPERATOR = 5
 
+; token types
+TOKEN_TYPE_OPCODE = 0
+TOKEN_TYPE_DIRECTIVE = 1
+TOKEN_TYPE_NUMERIC_LITERAL = 2
+TOKEN_TYPE_OPERATOR = 3
+
 ; store the current state of the state machine
 state: .res 1
 
@@ -19,12 +27,12 @@ token_count: .res 1
 
 .segment "CODE"
 
-.scope Tokenizer
 
 ; redefinitions
 
 code_ptr = u0
 token_char_ptr = u2
+token_type_ptr = u3
 
 ; split jump table of state routines
 tokenizer_state_jump_table_lo:
@@ -59,6 +67,12 @@ tokenizer_state_jump_table_hi:
 	sta token_char_ptr
 	lda #>TOKEN_BANK_ADDRESS
 	sta token_char_ptr+1
+
+	; initialize next token type address
+	lda #<TOKEN_TYPE_BANK_ADDRESS
+	sta token_type_ptr
+	lda #>TOKEN_TYPE_BANK_ADDRESS
+	sta token_type_ptr+1
 
 	; point to the syntax
 	lda #<test_syntax
@@ -212,6 +226,16 @@ tokenizer_state_jump_table_hi:
 	inc token_char_ptr+1
 :
 
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_NUMERIC_LITERAL
+	sta (token_type_ptr),y
+	
+	; increment next token character
+	inc token_type_ptr
+	bne :+
+	inc token_type_ptr+1
+:
 	
 	; set the state to COMPLETED TOKEN
 	lda #STATE_COMPLETED_TOKEN
@@ -237,6 +261,17 @@ tokenizer_state_jump_table_hi:
 	inc token_char_ptr
 	bne :+
 	inc token_char_ptr+1
+:
+
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_OPERATOR
+	sta (token_type_ptr),y
+	
+	; increment next token character
+	inc token_type_ptr
+	bne :+
+	inc token_type_ptr+1
 :
 
 	lda #STATE_COMPLETED_TOKEN
