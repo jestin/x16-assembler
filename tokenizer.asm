@@ -1,5 +1,5 @@
-.ifndef PARSER_ASM
-PARSER_ASM = 1
+.ifndef TOKENIZER_ASM
+TOKENIZER_ASM = 1
 
 .segment "BSS"
 
@@ -19,7 +19,7 @@ token_count: .res 1
 
 .segment "CODE"
 
-.scope Parser
+.scope Tokenizer
 
 ; redefinitions
 
@@ -27,7 +27,7 @@ code_ptr = u0
 token_char_ptr = u2
 
 ; split jump table of state routines
-parser_state_jump_table_lo:
+tokenizer_state_jump_table_lo:
 	.byte <new_token_state
 	.byte <complete_token_state
 	.byte <end_of_code_state
@@ -35,7 +35,7 @@ parser_state_jump_table_lo:
 	.byte <numeric_literal_state
 	.byte <operator_state
 
-parser_state_jump_table_hi:
+tokenizer_state_jump_table_hi:
 	.byte >new_token_state
 	.byte >complete_token_state
 	.byte >end_of_code_state
@@ -83,14 +83,14 @@ parser_state_jump_table_hi:
 	
 	; check the state
 	ldx state
-	lda parser_state_jump_table_lo,x
+	lda tokenizer_state_jump_table_lo,x
 	sta u1L
-	lda parser_state_jump_table_hi,x
+	lda tokenizer_state_jump_table_hi,x
 	sta u1H
 	jmp (u1)
 @end_state_loop:
 	; we shouldn't get this far because the end_of_code_state routine should
-	; return from the parser
+	; return from the tokenizer
 
 .endproc
 
@@ -175,17 +175,17 @@ parser_state_jump_table_hi:
 
 .proc end_of_code_state
 	; pull the top of the loop off the stack so that rts returns from the
-	; parser
+	; tokenizer
 	pla
 	pla
 
-	; this should now return to whomever called parser
+	; this should now return to whomever called tokenizer
 	rts
 .endproc
 
 .proc error_state
 	; pull the top of the loop off the stack so that rts returns from the
-	; parser
+	; tokenizer
 	stp
 	pla
 	pla
@@ -244,12 +244,12 @@ parser_state_jump_table_hi:
 	rts
 .endproc
 
-.endscope ; Parser
+.endscope ; Tokenizer
 
 .segment "DATA"
 
 test_syntax:
 .literal "2+3",0
 
-.endif ; PARSER_ASM
+.endif ; TOKENIZER_ASM
 

@@ -8,7 +8,7 @@ MAIN = main.asm
 SOURCES = $(MAIN) \
 		  x16.inc \
 		  vera.inc \
-		  parser.asm
+		  tokenizer.asm
 
 all: $(PROG)
 

@@ -9,11 +9,11 @@
 .include "vera.inc"
 
 .include "memory.inc"
-.include "parser.asm"
+.include "tokenizer.asm"
 
 .proc main
 
-	jsr Parser::parse
+	jsr Tokenizer::parse
 	jsr print_tokens
 
 	rts
