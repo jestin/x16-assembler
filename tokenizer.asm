@@ -108,6 +108,10 @@ tokenizer_state_jump_table_hi:
 
 .endproc
 
+;------------------------------------------------------------
+; state procs
+;------------------------------------------------------------
+
 .proc new_token_state
 
 	; read the next character (it will still need to be read later)
@@ -121,24 +125,24 @@ tokenizer_state_jump_table_hi:
 	cmp #0
 	beq @end_of_code
 
-	; check for a numeric value
-	cmp #$30 ; PETSCII 0
-	bmi :+ ; less than PETSCII 0
-	cmp #$3a ; PETSCII : (one greater than PETSCII 9)
-	bcs :+
-	bra @numeric_literal
-
+	; check for whitespace
+	jsr check_whitespace
+	bcc @nonwhitespace
+	; if whitespace increment the cope pointer and return
+	inc code_ptr
+	bne :+
+	inc code_ptr+1
 :
-	; check for operator
-	cmp #$2a ; PETSCII *
-	beq @operator
-	cmp #$2b ; PETSCII +
-	beq @operator
-	cmp #$2d ; PETSCII -
-	beq @operator
-	cmp #$2f ; PETSCII -
-	beq @operator
-	
+	rts
+@nonwhitespace:
+	jsr check_numeric
+	bcc :+
+	bra @numeric_literal
+:
+	jsr check_operator
+	bcc :+
+	bra @operator
+:
 	; if we get this far, we are invalid
 	bra @error
 
@@ -285,12 +289,65 @@ tokenizer_state_jump_table_hi:
 	rts
 .endproc
 
+;------------------------------------------------------------
+; character detection procs
+;
+; Each of these functions expect the character to be in A,
+; and will set the carry bit if it matches
+;------------------------------------------------------------
+
+.proc check_whitespace
+	; check for whitespace
+	cmp #$20 ; space
+	beq @whitespace
+	cmp #$60 ; graphic space
+	beq @whitespace
+	cmp #$a0 ; space reversed
+	beq @whitespace
+	cmp #$e0 ; graphic space reversed
+	beq @whitespace
+	clc
+	rts
+@whitespace:
+	sec
+	rts
+.endproc ; check_whitespace
+
+.proc check_numeric
+	; check for a numeric value
+	cmp #$30 ; PETSCII 0
+	bmi @not_number ; less than PETSCII 0
+	cmp #$3a ; PETSCII : (one greater than PETSCII 9)
+	bcs @not_number
+	sec
+@not_number:
+
+	rts
+.endproc ; check_numeric
+
+.proc check_operator
+	; check for operator
+	cmp #$2a ; PETSCII *
+	beq @operator
+	cmp #$2b ; PETSCII +
+	beq @operator
+	cmp #$2d ; PETSCII -
+	beq @operator
+	cmp #$2f ; PETSCII -
+	beq @operator
+	clc
+	rts
+@operator:
+	sec
+	rts
+.endproc ; check_operator
+
 .endscope ; Tokenizer
 
 .segment "DATA"
 
 test_syntax:
-.literal "2 +3",0
+.literal "2 + 3",0
 
 .endif ; TOKENIZER_ASM
 
