@@ -8,11 +8,12 @@
 .include "x16.inc"
 .include "vera.inc"
 
+.include "memory.inc"
 .include "parser.asm"
 
 .proc main
 
-	jsr parse
+	jsr Parser::parse
 	jsr print_tokens
 
 	rts

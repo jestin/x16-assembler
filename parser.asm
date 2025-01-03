@@ -11,10 +11,6 @@ STATE_ERROR = 3
 STATE_NUMERIC_LITERAL = 4
 STATE_OPERATOR = 5
 
-; Tokens will be stored in banked memory separated by 0s
-TOKEN_BANK = 1
-TOKEN_BANK_ADDRESS = $A000
-
 ; store the current state of the state machine
 state: .res 1
 
@@ -22,6 +18,13 @@ state: .res 1
 token_count: .res 1
 
 .segment "CODE"
+
+.scope Parser
+
+; redefinitions
+
+code_ptr = u0
+token_char_ptr = u2
 
 ; split jump table of state routines
 parser_state_jump_table_lo:
@@ -53,15 +56,15 @@ parser_state_jump_table_hi:
 
 	; initialize next token address
 	lda #<TOKEN_BANK_ADDRESS
-	sta u2L
+	sta token_char_ptr
 	lda #>TOKEN_BANK_ADDRESS
-	sta u2H
+	sta token_char_ptr+1
 
 	; point to the syntax
 	lda #<test_syntax
-	sta u0L
+	sta code_ptr
 	lda #>test_syntax
-	sta u0H
+	sta code_ptr+1
 	
 	; set the state to NEW TOKEN
 	lda #STATE_NEW_TOKEN
@@ -93,26 +96,10 @@ parser_state_jump_table_hi:
 
 .proc new_token_state
 
-	; read the next character
-	lda (u0)
-
-	; increment next character
-	; increment next token character
-	inc u0L
-	bne :+
-	inc u0H
-:
+	; read the next character (it will still need to be read later)
+	lda (code_ptr)
 	
 	; TODO: check for invalid first characters for tokens
-
-	ldy #0
-	sta (u2),y
-
-	; increment next token character
-	inc u2L
-	bne :+
-	inc u2H
-:
 
 	; determine next state by the first character (when possible)
 
@@ -171,12 +158,12 @@ parser_state_jump_table_hi:
 	; write a 0 as a delimeter
 	lda #0
 	ldy #0
-	sta (u2),y
+	sta (token_char_ptr),y
 
 	; increment next token character
-	inc u2L
+	inc token_char_ptr
 	bne :+
-	inc u2H
+	inc token_char_ptr+1
 :
 
 	; set the state to NEW TOKEN
@@ -206,8 +193,26 @@ parser_state_jump_table_hi:
 .endproc
 
 .proc numeric_literal_state
-	; for now, we assume each token is a single character which has already
-	; been read
+	; read the next character
+	lda (code_ptr)
+
+	; increment next character
+	; increment next token character
+	inc code_ptr
+	bne :+
+	inc code_ptr+1
+:
+	; add to the current token
+	ldy #0
+	sta (token_char_ptr),y
+
+	; increment next token character
+	inc token_char_ptr
+	bne :+
+	inc token_char_ptr+1
+:
+
+	
 	; set the state to COMPLETED TOKEN
 	lda #STATE_COMPLETED_TOKEN
 	sta state
@@ -215,13 +220,31 @@ parser_state_jump_table_hi:
 .endproc
 
 .proc operator_state
-	; for now, we assume each token is a single character which has already
-	; been read
-	; set the state to COMPLETED TOKEN
+	; read the next character
+	lda (code_ptr)
+
+	; increment next character
+	; increment next token character
+	inc code_ptr
+	bne :+
+	inc code_ptr+1
+:
+	; add to the current token
+	ldy #0
+	sta (token_char_ptr),y
+
+	; increment next token character
+	inc token_char_ptr
+	bne :+
+	inc token_char_ptr+1
+:
+
 	lda #STATE_COMPLETED_TOKEN
 	sta state
 	rts
 .endproc
+
+.endscope ; Parser
 
 .segment "DATA"
 
