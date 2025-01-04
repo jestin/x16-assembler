@@ -3,6 +3,8 @@ CHARACTER_CHECKERS_ASM = 1
 
 ; Included inside the Tokenizer scope
 
+.segment "CODE"
+
 ;------------------------------------------------------------
 ; character detection procs
 ;
