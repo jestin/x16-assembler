@@ -16,12 +16,14 @@
 .segment "BSS"
 
 token_type: .res 1
+space_counter: .res 1
 
 .segment "CODE"
 
 ; redefinitions
 
 string_ptr = u0
+scratch = u1L
 
 .proc main
 
@@ -73,51 +75,23 @@ string_ptr = u0
 	bra @print_loop
 @end_print_loop:
 
-	; print spaces for separators
+	tya
+	sta scratch
+	sec
+	lda #15
+	sbc scratch
+	sta space_counter
+
+	; print enough spaces to make nice columns
+@space_print_loop:
 	lda #$20 ; PETSCII space
 	jsr BSOUT
-	jsr BSOUT
-	jsr BSOUT
-	jsr BSOUT
+	dec space_counter
+	bmi @end_space_print_loop
+	bra @space_print_loop
+@end_space_print_loop:
 
-	; print the token type on the same line
-	lda TOKEN_TYPE_BANK_ADDRESS,x
-	cmp #Tokenizer::TOKEN_TYPE_OPCODE
-	beq @token_type_opcode
-	cmp #Tokenizer::TOKEN_TYPE_DIRECTIVE
-	beq @token_type_directive
-	cmp #Tokenizer::TOKEN_TYPE_NUMERIC_LITERAL
-	beq @token_type_numeric_literal
-	cmp #Tokenizer::TOKEN_TYPE_OPERATOR
-	beq @token_type_operator
-	bra @next_line
-
-@token_type_opcode:
-	lda #<opcode_label
-	sta string_ptr
-	lda #>opcode_label
-	sta string_ptr+1
-	bra :+
-@token_type_directive:
-	lda #<directive_label
-	sta string_ptr
-	lda #>directive_label
-	sta string_ptr+1
-	bra :+
-@token_type_numeric_literal:
-	lda #<numeric_literal_label
-	sta string_ptr
-	lda #>numeric_literal_label
-	sta string_ptr+1
-	bra :+
-@token_type_operator:
-	lda #<operator_label
-	sta string_ptr
-	lda #>operator_label
-	sta string_ptr+1
-
-:
-	jsr print_string
+	jsr print_token_type
 
 @next_line:
 
@@ -173,6 +147,66 @@ string_ptr = u0
 	rts
 .endproc
 
+.proc print_token_type
+	; print the token type on the same line
+	lda TOKEN_TYPE_BANK_ADDRESS,x
+	cmp #Tokenizer::TOKEN_TYPE_OPCODE
+	beq @token_type_opcode
+	cmp #Tokenizer::TOKEN_TYPE_DIRECTIVE
+	beq @token_type_directive
+	cmp #Tokenizer::TOKEN_TYPE_DECIMAL_LITERAL
+	beq @token_type_decimal_literal
+	cmp #Tokenizer::TOKEN_TYPE_HEXADECIMAL_LITERAL
+	beq @token_type_hexadecimal_literal
+	cmp #Tokenizer::TOKEN_TYPE_BINARY_LITERAL
+	beq @token_type_binary_literal
+	cmp #Tokenizer::TOKEN_TYPE_OPERATOR
+	beq @token_type_operator
+	bra @end
+
+@token_type_opcode:
+	lda #<opcode_label
+	sta string_ptr
+	lda #>opcode_label
+	sta string_ptr+1
+	bra :+
+@token_type_directive:
+	lda #<directive_label
+	sta string_ptr
+	lda #>directive_label
+	sta string_ptr+1
+	bra :+
+@token_type_decimal_literal:
+	lda #<decimal_literal_label
+	sta string_ptr
+	lda #>decimal_literal_label
+	sta string_ptr+1
+	bra :+
+@token_type_hexadecimal_literal:
+	lda #<hexadecimal_literal_label
+	sta string_ptr
+	lda #>hexadecimal_literal_label
+	sta string_ptr+1
+	bra :+
+@token_type_binary_literal:
+	lda #<binary_literal_label
+	sta string_ptr
+	lda #>binary_literal_label
+	sta string_ptr+1
+	bra :+
+@token_type_operator:
+	lda #<operator_label
+	sta string_ptr
+	lda #>operator_label
+	sta string_ptr+1
+
+:
+	jsr print_string
+
+@end:
+	rts
+.endproc ; print_token_type
+
 .endscope ; Main
 
 .segment "DATA"
@@ -180,5 +214,7 @@ string_ptr = u0
 tokenizer_error_label: .literal $1c,"TOKENIZER ERROR!",$05,$0d,0
 opcode_label: .literal "OPCODE",0
 directive_label: .literal "DIRECTIVE",0
-numeric_literal_label: .literal "NUMERIC LITERAL",0
+decimal_literal_label: .literal "DECIMAL LITERAL",0
+hexadecimal_literal_label: .literal "HEXADECIMAL LITERAL",0
+binary_literal_label: .literal "BINARY LITERAL",0
 operator_label: .literal "OPERATOR",0
