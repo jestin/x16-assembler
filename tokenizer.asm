@@ -12,6 +12,7 @@ STATE_END_OF_CODE = 2
 STATE_ERROR = 3
 STATE_NUMERIC_LITERAL = 4
 STATE_OPERATOR = 5
+STATE_DIRECTIVE = 6
 
 ; token types
 TOKEN_TYPE_OPCODE = 0
@@ -44,6 +45,7 @@ tokenizer_state_jump_table_lo:
 	.byte <error_state
 	.byte <numeric_literal_state
 	.byte <operator_state
+	.byte <directive_state
 
 tokenizer_state_jump_table_hi:
 	.byte >new_token_state
@@ -52,6 +54,7 @@ tokenizer_state_jump_table_hi:
 	.byte >error_state
 	.byte >numeric_literal_state
 	.byte >operator_state
+	.byte >directive_state
 
 
 .proc parse
@@ -142,6 +145,10 @@ tokenizer_state_jump_table_hi:
 	bcc :+
 	bra @operator
 :
+	jsr check_directive_start
+	bcc :+
+	bra @directive
+:
 	; if we get this far, we are invalid
 	bra @error
 
@@ -162,6 +169,15 @@ tokenizer_state_jump_table_hi:
 	sta (token_type_ptr),y
 	
 	lda #STATE_OPERATOR
+	sta state
+	bra @end
+@directive:
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_DIRECTIVE
+	sta (token_type_ptr),y
+	
+	lda #STATE_DIRECTIVE
 	sta state
 	bra @end
 
@@ -308,6 +324,8 @@ tokenizer_state_jump_table_hi:
 .endproc
 
 .proc operator_state
+	; So far, we assume all operators are single characters.  This will change.
+
 	; read the next character
 	lda (code_ptr)
 	beq @completed_operator
@@ -337,6 +355,72 @@ tokenizer_state_jump_table_hi:
 	sta state
 	rts
 .endproc
+
+.proc directive_state
+	; read the next character
+	lda (code_ptr)
+	beq @completed_directive
+
+	; increment next character
+	; increment next token character
+	inc code_ptr
+	bne :+
+	inc code_ptr+1
+:
+
+	; check if we are the period at the beginning
+	cmp #$2e
+	bne @check_alpha
+
+	; check if we are the first character in the token, otherwise error
+	pha
+	lda cur_token_length
+	bne @format_not_at_start_error
+	pla
+	bra @add_to_token
+
+@check_alpha:
+	; check if we are a number
+	jsr check_alpha
+	bcs @add_to_token
+
+	; here we are neither an alpha, a period, nor the end of code
+	; we should only end with end of code or whitespace
+
+	jsr check_whitespace
+	bcs @completed_directive
+
+	; we are now in an error condition
+	bra @error
+
+@add_to_token:
+	; increment current token length
+	inc cur_token_length
+
+	; add to the current token
+	ldy #0
+	sta (token_char_ptr),y
+
+	; increment next token character
+	inc token_char_ptr
+	bne :+
+	inc token_char_ptr+1
+:
+	; return in the same state
+	rts
+@completed_directive:
+	; set the state to COMPLETED TOKEN
+	lda #STATE_COMPLETED_TOKEN
+	sta state
+	rts
+@format_not_at_start_error:
+	pla
+@error:
+	; set the state to ERROR
+	lda #STATE_ERROR
+	sta state
+	rts
+.endproc ; directive_state
 
 ;------------------------------------------------------------
 ; character detection procs
@@ -373,6 +457,18 @@ tokenizer_state_jump_table_hi:
 
 	rts
 .endproc ; check_numeric
+
+.proc check_alpha
+	; check for a numeric value
+	cmp #$41 ; PETSCII A
+	bmi @not_alpha ; less than PETSCII A
+	cmp #$5b ; PETSCII : (one greater than PETSCII Z)
+	bcs @not_alpha
+	sec
+@not_alpha:
+
+	rts
+.endproc ; check_alpha
 
 .proc check_numeric_start
 
@@ -428,12 +524,26 @@ tokenizer_state_jump_table_hi:
 	rts
 .endproc ; check_operator
 
+.proc check_directive_start
+	cmp #$2e
+	bne @not_period
+	rts
+@not_period:
+	clc
+	rts
+
+@format_prefix:
+	; carry will already be set if we get here
+	rts
+
+.endproc ; check_directive_start
+
 .endscope ; Tokenizer
 
 .segment "DATA"
 
 test_syntax:
-.literal "%24 + $345-1",0
+.literal "%24 + $345-1 .BYTE 3 .RES 256",0
 
 .endif ; TOKENIZER_ASM
 
