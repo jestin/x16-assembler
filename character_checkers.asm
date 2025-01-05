@@ -116,7 +116,11 @@ CHARACTER_CHECKERS_ASM = 1
 	beq @operator
 	cmp #$2d ; PETSCII -
 	beq @operator
-	cmp #$2f ; PETSCII -
+	cmp #$2f ; PETSCII /
+	beq @operator
+	cmp #$3a ; PETSCII :
+	beq @operator
+	cmp #$3d ; PETSCII =
 	beq @operator
 
 	; not an operator

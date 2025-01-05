@@ -17,6 +17,7 @@ STATE_HEXADECIMAL_LITERAL = 5
 STATE_BINARY_LITERAL = 6
 STATE_OPERATOR = 7
 STATE_DIRECTIVE = 8
+STATE_SYMBOL_OR_OPCODE = 9
 
 ; token types
 TOKEN_TYPE_OPCODE = 0
@@ -25,6 +26,7 @@ TOKEN_TYPE_DECIMAL_LITERAL = 2
 TOKEN_TYPE_HEXADECIMAL_LITERAL = 3
 TOKEN_TYPE_BINARY_LITERAL = 4
 TOKEN_TYPE_OPERATOR = 5
+TOKEN_TYPE_SYMBOL = 6
 
 ; store the current state of the state machine
 state: .res 1
@@ -55,6 +57,7 @@ tokenizer_state_jump_table_lo:
 	.byte <binary_literal_state
 	.byte <operator_state
 	.byte <directive_state
+	.byte <symbol_or_opcode
 
 tokenizer_state_jump_table_hi:
 	.byte >new_token_state
@@ -66,6 +69,7 @@ tokenizer_state_jump_table_hi:
 	.byte >binary_literal_state
 	.byte >operator_state
 	.byte >directive_state
+	.byte >symbol_or_opcode
 
 
 .proc parse
@@ -168,6 +172,10 @@ tokenizer_state_jump_table_hi:
 	bcc :+
 	bra @directive
 :
+	jsr check_alpha
+	bcc :+
+	bra @alpha
+:
 	; if we get this far, we are invalid
 	bra @error
 
@@ -179,8 +187,7 @@ tokenizer_state_jump_table_hi:
 	
 	; update the state
 	lda #STATE_DECIMAL_LITERAL
-	sta state
-	bra @end
+	bra @advance_token_ptr
 @hexadecimal_literal:
 	; add the token type
 	ldy #0
@@ -189,8 +196,7 @@ tokenizer_state_jump_table_hi:
 	
 	; update the state
 	lda #STATE_HEXADECIMAL_LITERAL
-	sta state
-	bra @end
+	bra @advance_token_ptr
 @binary_literal:
 	; add the token type
 	ldy #0
@@ -199,8 +205,7 @@ tokenizer_state_jump_table_hi:
 	
 	; update the state
 	lda #STATE_BINARY_LITERAL
-	sta state
-	bra @end
+	bra @advance_token_ptr
 @operator:
 	; add the token type
 	ldy #0
@@ -208,8 +213,7 @@ tokenizer_state_jump_table_hi:
 	sta (token_type_ptr),y
 	
 	lda #STATE_OPERATOR
-	sta state
-	bra @end
+	bra @advance_token_ptr
 @directive:
 	; add the token type
 	ldy #0
@@ -217,8 +221,19 @@ tokenizer_state_jump_table_hi:
 	sta (token_type_ptr),y
 	
 	lda #STATE_DIRECTIVE
+	bra @advance_token_ptr
+@alpha:
+	; This could either be a symbol definition, symbol reference, or an opcode
+	lda #STATE_SYMBOL_OR_OPCODE
+	bra @set_state
+@advance_token_ptr:
+	; increment next token character
+	inc token_type_ptr
+	bne @set_state
+	inc token_type_ptr+1
+@set_state:
 	sta state
-	bra @end
+	rts
 
 @end_of_code:
 	lda #STATE_END_OF_CODE
@@ -230,13 +245,6 @@ tokenizer_state_jump_table_hi:
 	sta state
 	rts ; exit immediately
 
-@end:
-	; increment next token character
-	inc token_type_ptr
-	bne :+
-	inc token_type_ptr+1
-:
-	rts
 .endproc
 
 .proc complete_token_state
@@ -517,18 +525,8 @@ tokenizer_state_jump_table_hi:
 	bra @error
 
 @add_to_token:
-	; increment current token length
-	inc cur_token_length
+	jsr add_to_token
 
-	; add to the current token
-	ldy #0
-	sta (token_char_ptr),y
-
-	; increment next token character
-	inc token_char_ptr
-	bne :+
-	inc token_char_ptr+1
-:
 	; return in the same state
 	rts
 @completed_directive:
@@ -544,6 +542,74 @@ tokenizer_state_jump_table_hi:
 	sta state
 	rts
 .endproc ; directive_state
+
+.proc symbol_or_opcode
+	; So far, we assume all operators are single characters.  This will change.
+
+	; read the next character
+	lda (code_ptr)
+	beq @check_if_op_code
+
+	jsr check_whitespace
+	bcs @check_if_op_code
+
+	jsr check_operator
+	bcs @check_if_op_code
+
+	; increment next character
+	; increment next token character
+	inc code_ptr
+	bne :+
+	inc code_ptr+1
+:
+	; check that we are still an alpha 
+	jsr check_alpha
+	bcc @error
+
+	jsr add_to_token
+
+	; return in the same state
+	rts
+@check_if_op_code:
+	; here is where we check if we are an opcode
+
+	; opcodes are only ever 3 in length
+	lda cur_token_length
+	cmp #3
+	bne @complete_symbol
+	
+	; this symbol is 3 characters, so check if it is really an opcode
+	jsr check_cur_token_for_opcode
+	bcc @complete_symbol
+
+	; we found a matching opcode
+	ldy #0
+	lda #TOKEN_TYPE_OPCODE
+	sta (token_type_ptr),y
+	bra @completed
+
+@complete_symbol:
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_SYMBOL
+	sta (token_type_ptr),y
+
+	; increment next token character since we didn't do it before changing
+	; state
+	inc token_type_ptr
+	bne @completed
+	inc token_type_ptr+1
+
+@completed:
+	lda #STATE_COMPLETED_TOKEN
+	sta state
+	rts
+@error:
+	; set the state to ERROR
+	lda #STATE_ERROR
+	sta state
+	rts
+.endproc ; symbol_or_opcode
 
 .proc add_to_token
 	; increment current token length
@@ -562,12 +628,18 @@ tokenizer_state_jump_table_hi:
 	rts
 .endproc ; add_to_token
 
+.proc check_cur_token_for_opcode
+	; TODO: check if the current token is an opcode
+
+	rts
+.endproc ; check_cur_token_for_opcode
+
 .endscope ; Tokenizer
 
 .segment "DATA"
 
 test_syntax:
-.literal "%10010010 + $345 - 1 .BYTE 3 .RES 256",0
+.literal "CONST=%10010010 + $345 - 1 TEST: .BYTE 3 .RES 256",0
 
 .endif ; TOKENIZER_ASM
 
