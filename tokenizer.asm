@@ -629,7 +629,9 @@ tokenizer_state_jump_table_hi:
 .endproc ; add_to_token
 
 .proc check_cur_token_for_opcode
-	; TODO: check if the current token is an opcode
+	; TODO: Check if the current token is an opcode.  For now, clear carry bit
+	; so opcodes are never detected
+	clc
 
 	rts
 .endproc ; check_cur_token_for_opcode
@@ -639,7 +641,7 @@ tokenizer_state_jump_table_hi:
 .segment "DATA"
 
 test_syntax:
-.literal "CONST=%10010010 + $345 - 1 TEST: .BYTE 3 .RES 256",0
+.literal "CONST=%10010010 + $345 - 1 TEST: .BYTE 3 .RES 256 ONE-TWO",0
 
 .endif ; TOKENIZER_ASM
 
