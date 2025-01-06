@@ -64,6 +64,16 @@ OPCODE_CHECKERS_ASM = 1
 	jsr check_opcodes_O
 	rts
 :
+	cmp #$50 ; PETSCII P
+	bne :+
+	jsr check_opcodes_P
+	rts
+:
+	cmp #$52 ; PETSCII R
+	bne :+
+	jsr check_opcodes_R
+	rts
+:
 
 ; not found, so manually clear carry
 	clc
@@ -472,5 +482,99 @@ OPCODE_CHECKERS_ASM = 1
 	pla
 	rts
 .endproc ; check_opcodes_O
+
+.proc check_opcodes_P
+	pha
+
+	ldy #1
+	lda (cur_token_ptr),y
+	cmp #$48 ; PETSCII H
+	beq @H
+	cmp #$4c ; PETSCII L
+	beq @L
+
+	bra @notopcode
+
+@H:
+	ldy #2
+	lda (cur_token_ptr),y
+	cmp #$41 ; PETSCII A
+	beq @opcode				; PHA
+	cmp #$50 ; PETSCII P
+	beq @opcode				; PHP
+	cmp #$58 ; PETSCII X
+	beq @opcode				; PHX
+	cmp #$59 ; PETSCII Y
+	beq @opcode				; PHY
+	bra @notopcode
+@L:
+	ldy #2
+	lda (cur_token_ptr),y
+	cmp #$41 ; PETSCII A
+	beq @opcode				; PLA
+	cmp #$50 ; PETSCII P
+	beq @opcode				; PLP
+	cmp #$58 ; PETSCII X
+	beq @opcode				; PLX
+	cmp #$59 ; PETSCII Y
+	beq @opcode				; PLY
+	bra @notopcode
+
+@opcode:
+	sec
+	pla
+	rts
+@notopcode:
+	clc
+	pla
+	rts
+.endproc ; check_opcodes_P
+
+.proc check_opcodes_R
+	pha
+
+	ldy #1
+	lda (cur_token_ptr),y
+	cmp #$4d ; PETSCII M
+	beq @M
+	cmp #$4f ; PETSCII O
+	beq @O
+	cmp #$54 ; PETSCII T
+	beq @T
+
+	bra @notopcode
+
+@M:
+	ldy #2
+	lda (cur_token_ptr),y
+	cmp #$42 ; PETSCII B
+	beq @opcode				; RMB
+	bra @notopcode
+@O:
+	ldy #2
+	lda (cur_token_ptr),y
+	cmp #$4c ; PETSCII L
+	beq @opcode				; ROL
+	cmp #$52 ; PETSCII R
+	beq @opcode				; ROR
+	bra @notopcode
+@T:
+	ldy #2
+	lda (cur_token_ptr),y
+	cmp #$49 ; PETSCII I
+	beq @opcode				; RTI
+	cmp #$53 ; PETSCII S
+	beq @opcode				; RTS
+	bra @notopcode
+
+@opcode:
+	sec
+	pla
+	rts
+@notopcode:
+	clc
+	pla
+	rts
+.endproc ; check_opcodes_R
 
 .endif ; OPCODE_CHECKERS_ASM
