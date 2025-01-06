@@ -4,6 +4,7 @@ TOKENIZER_ASM = 1
 .scope Tokenizer
 
 .include "character_checkers.asm"
+.include "opcode_checkers.asm"
 
 .segment "BSS"
 
@@ -47,6 +48,7 @@ code_ptr = u0
 state_proc_ptr = u1
 token_char_ptr = u2
 token_type_ptr = u3
+cur_token_ptr = u4
 
 ; split jump table of state routines
 tokenizer_state_jump_table_lo:
@@ -160,6 +162,14 @@ tokenizer_state_jump_table_hi:
 :
 	rts
 @nonwhitespace:
+	; update the cur_token_ptr
+	pha
+	lda token_char_ptr
+	sta cur_token_ptr
+	lda token_char_ptr+1
+	sta cur_token_ptr+1
+	pla
+
 	jsr check_numeric
 	bcc :+
 	bra @decimal_literal
@@ -609,13 +619,14 @@ tokenizer_state_jump_table_hi:
 	lda #TOKEN_TYPE_SYMBOL
 	sta (token_type_ptr),y
 
+@completed:
 	; increment next token character since we didn't do it before changing
 	; state
 	inc token_type_ptr
-	bne @completed
+	bne :+
 	inc token_type_ptr+1
+:
 
-@completed:
 	lda #STATE_COMPLETED_TOKEN
 	sta state
 	rts
@@ -674,14 +685,6 @@ tokenizer_state_jump_table_hi:
 	; return in the same state
 	rts
 .endproc ; add_to_token
-
-.proc check_cur_token_for_opcode
-	; TODO: Check if the current token is an opcode.  For now, clear carry bit
-	; so opcodes are never detected
-	clc
-
-	rts
-.endproc ; check_cur_token_for_opcode
 
 .endscope ; Tokenizer
 

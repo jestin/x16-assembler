@@ -9,7 +9,8 @@ SOURCES = $(MAIN) \
 		  x16.inc \
 		  vera.inc \
 		  tokenizer.asm \
-		  character_checkers.asm
+		  character_checkers.asm \
+		  opcode_checkers.asm
 
 all: $(PROG)
 

@@ -5,12 +5,12 @@ CHARACTER_CHECKERS_ASM = 1
 
 .segment "CODE"
 
-;------------------------------------------------------------
+;----------------------------------------------------------------------------
 ; character detection procs
 ;
-; Each of these functions expect the character to be in A,
-; and will set the carry bit if it matches
-;------------------------------------------------------------
+; Each of these functions expect the character to be in A, and will set the
+; carry bit if it matches
+;----------------------------------------------------------------------------
 
 .proc check_whitespace
 	; check for whitespace
