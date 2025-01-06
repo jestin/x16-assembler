@@ -145,6 +145,8 @@ CHARACTER_CHECKERS_ASM = 1
 	beq @operator
 	cmp #$3d ; PETSCII =
 	beq @operator
+	cmp #$23 ; PETSCII #
+	beq @operator
 
 	; not an operator
 	clc

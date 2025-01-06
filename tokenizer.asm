@@ -699,7 +699,8 @@ test_syntax:
 .literal $0d
 .literal "    ; USE SCREEN MODE 3",$0d
 .literal "    LDA $03",$0d
-.literal "    JSR SCREEN",$0d,0
+.literal "    JSR SCREEN",$0d
+.literal "    LDX #0",0
 
 .endif ; TOKENIZER_ASM
 
