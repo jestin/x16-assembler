@@ -22,12 +22,25 @@ CHARACTER_CHECKERS_ASM = 1
 	beq @whitespace
 	cmp #$e0 ; graphic space reversed
 	beq @whitespace
+	cmp #$0d ; return
+	beq @whitespace
 	clc
 	rts
 @whitespace:
 	; carry will already be set if we get here
 	rts
 .endproc ; check_whitespace
+
+.proc check_end_of_line
+	; check for hex prefix
+	cmp #$0d
+	beq @end_of_line
+	; not the end of a line
+	clc
+@end_of_line:
+	; carry will already be set if we get here
+	rts
+.endproc ;check_end_of_line
 
 .proc check_numeric
 	; check for a numeric value

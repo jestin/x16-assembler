@@ -641,7 +641,7 @@ tokenizer_state_jump_table_hi:
 .segment "DATA"
 
 test_syntax:
-.literal "CONST=%10010010 + $345 - 1 TEST: .BYTE 3 .RES 256 ONE-TWO",0
+.literal "MYCONST=%10010010 + $345 - 1",$0d,"TEST: .BYTE 3 .RES 256 THREE=ONE+TWO",$0d,0
 
 .endif ; TOKENIZER_ASM
 
