@@ -34,6 +34,16 @@ OPCODE_CHECKERS_ASM = 1
 	jsr check_opcodes_D
 	rts
 :
+	cmp #$45 ; PETSCII E
+	bne :+
+	jsr check_opcodes_E
+	rts
+:
+	cmp #$49 ; PETSCII I
+	bne :+
+	jsr check_opcodes_I
+	rts
+:
 
 ; not found, so manually clear carry
 	clc
@@ -264,5 +274,63 @@ OPCODE_CHECKERS_ASM = 1
 	pla
 	rts
 .endproc ; check_opcodes_D
+
+.proc check_opcodes_E
+	pha
+
+	ldy #1
+	lda (cur_token_ptr),y
+	cmp #$4f ; PETSCII O
+	beq @O
+
+	bra @notopcode
+
+@O:
+	ldy #2
+	lda (cur_token_ptr),y
+	cmp #$52 ; PETSCII R
+	beq @opcode				; EOR
+	bra @notopcode
+
+@opcode:
+	sec
+	pla
+	rts
+@notopcode:
+	clc
+	pla
+	rts
+.endproc ; check_opcodes_E
+
+.proc check_opcodes_I
+	pha
+
+	ldy #1
+	lda (cur_token_ptr),y
+	cmp #$4e ; PETSCII N
+	beq @N
+
+	bra @notopcode
+
+@N:
+	ldy #2
+	lda (cur_token_ptr),y
+	cmp #$43 ; PETSCII C
+	beq @opcode				; INC
+	cmp #$58 ; PETSCII X
+	beq @opcode				; INX
+	cmp #$59 ; PETSCII Y
+	beq @opcode				; INY
+	bra @notopcode
+
+@opcode:
+	sec
+	pla
+	rts
+@notopcode:
+	clc
+	pla
+	rts
+.endproc ; check_opcodes_I
 
 .endif ; OPCODE_CHECKERS_ASM
