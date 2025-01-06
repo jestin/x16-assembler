@@ -164,6 +164,8 @@ scratch = u1L
 	beq @token_type_operator
 	cmp #Tokenizer::TOKEN_TYPE_SYMBOL
 	beq @token_type_symbol
+	cmp #Tokenizer::TOKEN_TYPE_COMMENT
+	beq @token_type_comment
 	bra @end
 
 @token_type_opcode:
@@ -207,6 +209,12 @@ scratch = u1L
 	sta string_ptr
 	lda #>symbol_label
 	sta string_ptr+1
+	bra :+
+@token_type_comment:
+	lda #<comment_label
+	sta string_ptr
+	lda #>comment_label
+	sta string_ptr+1
 :
 	jsr print_string
 
@@ -221,6 +229,7 @@ scratch = u1L
 tokenizer_error_label: .literal $1c,"TOKENIZER ERROR!",$05,$0d,0
 opcode_label: .literal "OPCODE",0
 directive_label: .literal "DIRECTIVE",0
+comment_label: .literal "COMMENT",0
 decimal_literal_label: .literal "DECIMAL LITERAL",0
 hexadecimal_literal_label: .literal "HEXADECIMAL LITERAL",0
 binary_literal_label: .literal "BINARY LITERAL",0

@@ -42,6 +42,16 @@ CHARACTER_CHECKERS_ASM = 1
 	rts
 .endproc ;check_end_of_line
 
+.proc check_comment_prefix
+	; check for hex prefix
+	cmp #$3b
+	beq @comment_prefix
+	clc
+@comment_prefix:
+	; carry will already be set if we get here
+	rts
+.endproc ;check_comment_prefix
+
 .proc check_numeric
 	; check for a numeric value
 	cmp #$30 ; PETSCII 0

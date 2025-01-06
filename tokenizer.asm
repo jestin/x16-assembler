@@ -18,6 +18,7 @@ STATE_BINARY_LITERAL = 6
 STATE_OPERATOR = 7
 STATE_DIRECTIVE = 8
 STATE_SYMBOL_OR_OPCODE = 9
+STATE_COMMENT = 10
 
 ; token types
 TOKEN_TYPE_OPCODE = 0
@@ -27,6 +28,7 @@ TOKEN_TYPE_HEXADECIMAL_LITERAL = 3
 TOKEN_TYPE_BINARY_LITERAL = 4
 TOKEN_TYPE_OPERATOR = 5
 TOKEN_TYPE_SYMBOL = 6
+TOKEN_TYPE_COMMENT = 7 ; may remove this later
 
 ; store the current state of the state machine
 state: .res 1
@@ -58,6 +60,7 @@ tokenizer_state_jump_table_lo:
 	.byte <operator_state
 	.byte <directive_state
 	.byte <symbol_or_opcode
+	.byte <comment
 
 tokenizer_state_jump_table_hi:
 	.byte >new_token_state
@@ -70,6 +73,7 @@ tokenizer_state_jump_table_hi:
 	.byte >operator_state
 	.byte >directive_state
 	.byte >symbol_or_opcode
+	.byte >comment
 
 
 .proc parse
@@ -136,10 +140,14 @@ tokenizer_state_jump_table_hi:
 
 	; read the next character (it will still need to be read later)
 	lda (code_ptr)
-	beq @end_of_code
-	
-	; TODO: check for invalid first characters for tokens
+	bne :+
 
+	; end of code
+	lda #STATE_END_OF_CODE
+	sta state
+	rts ; exit immediately
+:
+	
 	stz cur_token_length
 
 	; check for whitespace
@@ -172,6 +180,10 @@ tokenizer_state_jump_table_hi:
 	bcc :+
 	bra @directive
 :
+	jsr check_comment_prefix
+	bcc :+
+	bra @comment
+:
 	jsr check_alpha
 	bcc :+
 	bra @alpha
@@ -187,7 +199,7 @@ tokenizer_state_jump_table_hi:
 	
 	; update the state
 	lda #STATE_DECIMAL_LITERAL
-	bra @advance_token_ptr
+	bra @advance_token_type_ptr
 @hexadecimal_literal:
 	; add the token type
 	ldy #0
@@ -196,7 +208,7 @@ tokenizer_state_jump_table_hi:
 	
 	; update the state
 	lda #STATE_HEXADECIMAL_LITERAL
-	bra @advance_token_ptr
+	bra @advance_token_type_ptr
 @binary_literal:
 	; add the token type
 	ldy #0
@@ -205,7 +217,7 @@ tokenizer_state_jump_table_hi:
 	
 	; update the state
 	lda #STATE_BINARY_LITERAL
-	bra @advance_token_ptr
+	bra @advance_token_type_ptr
 @operator:
 	; add the token type
 	ldy #0
@@ -213,7 +225,7 @@ tokenizer_state_jump_table_hi:
 	sta (token_type_ptr),y
 	
 	lda #STATE_OPERATOR
-	bra @advance_token_ptr
+	bra @advance_token_type_ptr
 @directive:
 	; add the token type
 	ldy #0
@@ -221,12 +233,20 @@ tokenizer_state_jump_table_hi:
 	sta (token_type_ptr),y
 	
 	lda #STATE_DIRECTIVE
-	bra @advance_token_ptr
+	bra @advance_token_type_ptr
+@comment:
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_COMMENT
+	sta (token_type_ptr),y
+	
+	lda #STATE_COMMENT
+	bra @advance_token_type_ptr
 @alpha:
 	; This could either be a symbol definition, symbol reference, or an opcode
 	lda #STATE_SYMBOL_OR_OPCODE
 	bra @set_state
-@advance_token_ptr:
+@advance_token_type_ptr:
 	; increment next token character
 	inc token_type_ptr
 	bne @set_state
@@ -234,11 +254,6 @@ tokenizer_state_jump_table_hi:
 @set_state:
 	sta state
 	rts
-
-@end_of_code:
-	lda #STATE_END_OF_CODE
-	sta state
-	rts ; exit immediately
 
 @error:
 	lda #STATE_ERROR
@@ -611,6 +626,38 @@ tokenizer_state_jump_table_hi:
 	rts
 .endproc ; symbol_or_opcode
 
+.proc comment
+
+	; read the next character
+	lda (code_ptr)
+	beq @completed_comment
+
+	; comments always go until the end of the line
+	jsr check_end_of_line
+	bcs @completed_comment
+
+	inc code_ptr
+	bne :+
+	inc code_ptr+1
+:
+
+	jsr add_to_token
+
+	; return in the same state
+	rts
+@completed_comment:
+	; TODO: will probably decide not to save comments as tokens
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_COMMENT
+	sta (token_type_ptr),y
+
+	lda #STATE_COMPLETED_TOKEN
+	sta state
+	rts
+
+.endproc ; comment
+
 .proc add_to_token
 	; increment current token length
 	inc cur_token_length
@@ -641,7 +688,15 @@ tokenizer_state_jump_table_hi:
 .segment "DATA"
 
 test_syntax:
-.literal "MYCONST=%10010010 + $345 - 1",$0d,"TEST: .BYTE 3 .RES 256 THREE=ONE+TWO",$0d,0
+.literal "; THIS IS SAMBLE CODE FOR TESTING",$0d
+.literal $0d
+.literal "; FIRST DEFINE SYMBOLS",$0d
+.literal "SCREEN = $FF5F",$0d
+.literal "BSOUT = $FFD2",$0d
+.literal $0d
+.literal "    ; USE SCREEN MODE 3",$0d
+.literal "    LDA $03",$0d
+.literal "    JSR SCREEN",$0d,0
 
 .endif ; TOKENIZER_ASM
 
