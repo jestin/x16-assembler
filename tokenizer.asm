@@ -20,6 +20,7 @@ STATE_OPERATOR = 7
 STATE_DIRECTIVE = 8
 STATE_SYMBOL_OR_OPCODE = 9
 STATE_COMMENT = 10
+STATE_SEPARATOR = 11
 
 ; token types
 TOKEN_TYPE_OPCODE = 0
@@ -30,6 +31,7 @@ TOKEN_TYPE_BINARY_LITERAL = 4
 TOKEN_TYPE_OPERATOR = 5
 TOKEN_TYPE_SYMBOL = 6
 TOKEN_TYPE_COMMENT = 7 ; may remove this later
+TOKEN_TYPE_SEPARATOR = 8
 
 ; store the current state of the state machine
 state: .res 1
@@ -61,8 +63,9 @@ tokenizer_state_jump_table_lo:
 	.byte <binary_literal_state
 	.byte <operator_state
 	.byte <directive_state
-	.byte <symbol_or_opcode
-	.byte <comment
+	.byte <symbol_or_opcode_state
+	.byte <comment_state
+	.byte <separator_state
 
 tokenizer_state_jump_table_hi:
 	.byte >new_token_state
@@ -74,8 +77,9 @@ tokenizer_state_jump_table_hi:
 	.byte >binary_literal_state
 	.byte >operator_state
 	.byte >directive_state
-	.byte >symbol_or_opcode
-	.byte >comment
+	.byte >symbol_or_opcode_state
+	.byte >comment_state
+	.byte >separator_state
 
 
 .proc parse
@@ -186,6 +190,10 @@ tokenizer_state_jump_table_hi:
 	bcc :+
 	bra @operator
 :
+	jsr check_separator
+	bcc :+
+	bra @separator
+:
 	jsr check_directive_start
 	bcc :+
 	bra @directive
@@ -235,6 +243,14 @@ tokenizer_state_jump_table_hi:
 	sta (token_type_ptr),y
 	
 	lda #STATE_OPERATOR
+	bra @advance_token_type_ptr
+@separator:
+	; add the token type
+	ldy #0
+	lda #TOKEN_TYPE_SEPARATOR
+	sta (token_type_ptr),y
+	
+	lda #STATE_SEPARATOR
 	bra @advance_token_type_ptr
 @directive:
 	; add the token type
@@ -331,6 +347,9 @@ tokenizer_state_jump_table_hi:
 	jsr check_operator
 	bcs @completed_decimal
 
+	jsr check_separator
+	bcs @completed_decimal
+
 	; we now know that we are consuming the character
 
 	; increment next character
@@ -371,6 +390,9 @@ tokenizer_state_jump_table_hi:
 	bcs @completed_hexadecimal
 
 	jsr check_operator
+	bcs @completed_hexadecimal
+
+	jsr check_separator
 	bcs @completed_hexadecimal
 
 	; we now know that we are consuming the character
@@ -433,6 +455,9 @@ tokenizer_state_jump_table_hi:
 	jsr check_operator
 	bcs @completed_binary
 
+	jsr check_separator
+	bcs @completed_binary
+
 	; we now know that we are consuming the character
 
 	; increment next character
@@ -492,7 +517,7 @@ tokenizer_state_jump_table_hi:
 	bne :+
 	inc code_ptr+1
 :
-	; check that we are still a number 
+	; check that we are still an operator
 	jsr check_operator
 	bcc @completed_operator
 
@@ -568,7 +593,7 @@ tokenizer_state_jump_table_hi:
 	rts
 .endproc ; directive_state
 
-.proc symbol_or_opcode
+.proc symbol_or_opcode_state
 	; So far, we assume all operators are single characters.  This will change.
 
 	; read the next character
@@ -579,6 +604,9 @@ tokenizer_state_jump_table_hi:
 	bcs @check_if_op_code
 
 	jsr check_operator
+	bcs @check_if_op_code
+
+	jsr check_separator
 	bcs @check_if_op_code
 
 	; increment next character
@@ -635,9 +663,9 @@ tokenizer_state_jump_table_hi:
 	lda #STATE_ERROR
 	sta state
 	rts
-.endproc ; symbol_or_opcode
+.endproc ; symbol_or_opcode_state
 
-.proc comment
+.proc comment_state
 
 	; read the next character
 	lda (code_ptr)
@@ -667,7 +695,40 @@ tokenizer_state_jump_table_hi:
 	sta state
 	rts
 
-.endproc ; comment
+.endproc ; comment_state
+
+.proc separator_state
+	; So far, we assume all separators are single characters.  This will change.
+
+	; read the next character
+	lda (code_ptr)
+	beq @completed_separator
+
+	; increment next character
+	; increment next token character
+	inc code_ptr
+	bne :+
+	inc code_ptr+1
+:
+	; check that we are still a number 
+	jsr check_separator
+	bcc @completed_separator
+
+	; add to the current token
+	ldy #0
+	sta (token_char_ptr),y
+
+	; increment next token character
+	inc token_char_ptr
+	bne :+
+	inc token_char_ptr+1
+:
+
+@completed_separator:
+	lda #STATE_COMPLETED_TOKEN
+	sta state
+	rts
+.endproc
 
 .proc add_to_token
 	; increment current token length
@@ -700,7 +761,17 @@ test_syntax:
 .literal "    ; USE SCREEN MODE 3",$0d
 .literal "    LDA $03",$0d
 .literal "    JSR SCREEN",$0d
-.literal "    LDX #0",0
+.literal "    LDX #0",$0d
+.literal "PRINTLOOP:",$0d
+.literal "    LDA HELLOSTR,X",$0d
+.literal "    BEQ END",$0d
+.literal "    JSR BSOUT",$0d
+.literal "    INX",$0d
+.literal "    BRA PRINTLOOP",$0d
+.literal "END:",$0d
+.literal "    RTS",$0d
+.literal "HELLOSTR: .BYTE $48, $45, $4C, $4C, $4F, $2C",$0d
+.literal "HELLOSTR: .BYTE $57, $4F, $52, $4C, $4E, $21",$0d,0
 
 .endif ; TOKENIZER_ASM
 

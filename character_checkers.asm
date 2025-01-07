@@ -156,6 +156,19 @@ CHARACTER_CHECKERS_ASM = 1
 	rts
 .endproc ; check_operator
 
+.proc check_separator
+	; check for separator
+	cmp #$2c ; PETSCII *
+	beq @separator
+
+	; not an separator
+	clc
+	rts
+@separator:
+	; carry will already be set if we get here
+	rts
+.endproc ; check_separator
+
 .proc check_directive_start
 	cmp #$2e
 	bne @not_period

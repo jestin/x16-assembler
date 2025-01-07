@@ -162,6 +162,8 @@ scratch = u1L
 	beq @token_type_binary_literal
 	cmp #Tokenizer::TOKEN_TYPE_OPERATOR
 	beq @token_type_operator
+	cmp #Tokenizer::TOKEN_TYPE_SEPARATOR
+	beq @token_type_separator
 	cmp #Tokenizer::TOKEN_TYPE_SYMBOL
 	beq @token_type_symbol
 	cmp #Tokenizer::TOKEN_TYPE_COMMENT
@@ -204,6 +206,12 @@ scratch = u1L
 	lda #>operator_label
 	sta string_ptr+1
 	bra :+
+@token_type_separator:
+	lda #<separator_label
+	sta string_ptr
+	lda #>separator_label
+	sta string_ptr+1
+	bra :+
 @token_type_symbol:
 	lda #<symbol_label
 	sta string_ptr
@@ -234,4 +242,5 @@ decimal_literal_label: .literal "DECIMAL LITERAL",0
 hexadecimal_literal_label: .literal "HEXADECIMAL LITERAL",0
 binary_literal_label: .literal "BINARY LITERAL",0
 operator_label: .literal "OPERATOR",0
+separator_label: .literal "SEPARATOR",0
 symbol_label: .literal "SYMBOL",0
