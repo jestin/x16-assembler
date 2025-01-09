@@ -211,60 +211,53 @@ tokenizer_state_jump_table_hi:
 
 @decimal_literal:
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_DECIMAL_LITERAL
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 	
 	; update the state
 	lda #STATE_DECIMAL_LITERAL
 	bra @advance_token_type_ptr
 @hexadecimal_literal:
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_HEXADECIMAL_LITERAL
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 	
 	; update the state
 	lda #STATE_HEXADECIMAL_LITERAL
 	bra @advance_token_type_ptr
 @binary_literal:
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_BINARY_LITERAL
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 	
 	; update the state
 	lda #STATE_BINARY_LITERAL
 	bra @advance_token_type_ptr
 @operator:
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_OPERATOR
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 	
 	lda #STATE_OPERATOR
 	bra @advance_token_type_ptr
 @separator:
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_SEPARATOR
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 	
 	lda #STATE_SEPARATOR
 	bra @advance_token_type_ptr
 @directive:
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_DIRECTIVE
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 	
 	lda #STATE_DIRECTIVE
 	bra @advance_token_type_ptr
 @comment:
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_COMMENT
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 	
 	lda #STATE_COMMENT
 	bra @advance_token_type_ptr
@@ -294,8 +287,7 @@ tokenizer_state_jump_table_hi:
 
 	; write a 0 as a delimeter
 	lda #0
-	ldy #0
-	sta (token_char_ptr),y
+	sta (token_char_ptr)
 
 	; increment next token character
 	inc token_char_ptr
@@ -522,8 +514,7 @@ tokenizer_state_jump_table_hi:
 	bcc @completed_operator
 
 	; add to the current token
-	ldy #0
-	sta (token_char_ptr),y
+	sta (token_char_ptr)
 
 	; increment next token character
 	inc token_char_ptr
@@ -636,16 +627,14 @@ tokenizer_state_jump_table_hi:
 	bcc @complete_symbol
 
 	; we found a matching opcode
-	ldy #0
 	lda #TOKEN_TYPE_OPCODE
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 	bra @completed
 
 @complete_symbol:
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_SYMBOL
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 
 @completed:
 	; increment next token character since we didn't do it before changing
@@ -687,9 +676,8 @@ tokenizer_state_jump_table_hi:
 @completed_comment:
 	; TODO: will probably decide not to save comments as tokens
 	; add the token type
-	ldy #0
 	lda #TOKEN_TYPE_COMMENT
-	sta (token_type_ptr),y
+	sta (token_type_ptr)
 
 	lda #STATE_COMPLETED_TOKEN
 	sta state
@@ -715,8 +703,7 @@ tokenizer_state_jump_table_hi:
 	bcc @completed_separator
 
 	; add to the current token
-	ldy #0
-	sta (token_char_ptr),y
+	sta (token_char_ptr)
 
 	; increment next token character
 	inc token_char_ptr
@@ -735,8 +722,7 @@ tokenizer_state_jump_table_hi:
 	inc cur_token_length
 
 	; add to the current token
-	ldy #0
-	sta (token_char_ptr),y
+	sta (token_char_ptr)
 
 	; increment next token character
 	inc token_char_ptr
