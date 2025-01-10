@@ -50,13 +50,17 @@ scratch = u1L
 @char_loop:
 	jsr BASIN
 	sta cur_line,x
-	inx
 	cmp #$0d		; eol
 	beq @end_of_line
+	inx
 	bra @char_loop
 
 @end_of_line:
+	txa
+	beq @line_loop
+
 	; write a 0 to end the string
+	inx
 	lda #0
 	sta cur_line,x
 
