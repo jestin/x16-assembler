@@ -22,8 +22,6 @@ CHARACTER_CHECKERS_ASM = 1
 	beq @whitespace
 	cmp #$e0 ; graphic space reversed
 	beq @whitespace
-	cmp #$0d ; return
-	beq @whitespace
 	clc
 	rts
 @whitespace:
@@ -33,7 +31,7 @@ CHARACTER_CHECKERS_ASM = 1
 
 .proc check_end_of_line
 	; check for hex prefix
-	cmp #$0d
+	cmp #$0d ; return
 	beq @end_of_line
 	; not the end of a line
 	clc

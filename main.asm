@@ -17,8 +17,14 @@
 
 token_type: .res 1
 space_counter: .res 1
+cur_line: .res 256
 
 .segment "CODE"
+
+; test files
+
+hello_asm: .literal "HELLO.ASM"
+end_hello_asm:
 
 ; redefinitions
 
@@ -26,6 +32,33 @@ string_ptr = u0
 scratch = u1L
 
 .proc main
+	lda #1
+	ldx #8
+	ldy #0
+	jsr SETLFS
+	lda #(end_hello_asm-hello_asm)
+	ldx #<hello_asm
+	ldy #>hello_asm
+	jsr SETNAM
+	jsr OPEN
+	ldx #1
+	jsr CHKIN
+
+	ldx #0
+
+@line_loop:
+@char_loop:
+	jsr BASIN
+	sta cur_line,x
+	inx
+	cmp #$0d		; eol
+	beq @end_of_line
+	bra @char_loop
+
+@end_of_line:
+	; write a 0 to end the string
+	lda #0
+	sta cur_line,x
 
 	jsr Tokenizer::parse
 	
@@ -42,6 +75,25 @@ scratch = u1L
 :
 	jsr print_tokens
 
+	; read the status for end of file
+	jsr READST
+	bit #%01000000
+	bne @end_of_file
+
+	ldx #0
+	stz Tokenizer::token_count
+	bra @line_loop
+
+@end_of_file:
+
+	; redirect input back to keyboard
+	ldx #0
+	jsr CHKIN
+
+	; close the input file
+	lda #1
+	jsr CLOSE
+
 @end:
 	rts
 .endproc
@@ -51,14 +103,11 @@ scratch = u1L
 	phx
 	phy
 
-	lda #TOKEN_BANK
-	sta $00
-
 	ldx #0
 
-	lda #<TOKEN_BANK_ADDRESS
+	lda #<Tokenizer::cur_tokens
 	sta Tokenizer::token_char_ptr
-	lda #>TOKEN_BANK_ADDRESS
+	lda #>Tokenizer::cur_tokens
 	sta Tokenizer::token_char_ptr+1
 
 @token_loop:
@@ -101,7 +150,7 @@ scratch = u1L
 
 	inx
 	cpx Tokenizer::token_count
-	beq @end_token_loop
+	bcs @end_token_loop
 
 	; update the next token address
 	clc
@@ -149,7 +198,7 @@ scratch = u1L
 
 .proc print_token_type
 	; print the token type on the same line
-	lda TOKEN_TYPE_BANK_ADDRESS,x
+	lda Tokenizer::cur_token_types,x
 	cmp #Tokenizer::TOKEN_TYPE_OPCODE
 	beq @token_type_opcode
 	cmp #Tokenizer::TOKEN_TYPE_DIRECTIVE

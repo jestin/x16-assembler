@@ -41,6 +41,12 @@ cur_token_length: .res 1
 ; the number of tokens
 token_count: .res 1
 
+; array of tokens, delimited by 0
+cur_tokens: .res 256
+
+; array of token types
+cur_token_types: .res 256
+
 .segment "CODE"
 
 
@@ -88,26 +94,22 @@ tokenizer_state_jump_table_hi:
 	lda #0
 	sta token_count
 
-	; set the token bank (do not change in any of these routines)
-	lda #TOKEN_BANK
-	sta $00
-
 	; initialize next token address
-	lda #<TOKEN_BANK_ADDRESS
+	lda #<cur_tokens
 	sta token_char_ptr
-	lda #>TOKEN_BANK_ADDRESS
+	lda #>cur_tokens
 	sta token_char_ptr+1
 
 	; initialize next token type address
-	lda #<TOKEN_TYPE_BANK_ADDRESS
+	lda #<cur_token_types
 	sta token_type_ptr
-	lda #>TOKEN_TYPE_BANK_ADDRESS
+	lda #>cur_token_types
 	sta token_type_ptr+1
 
 	; point to the syntax
-	lda #<test_syntax
+	lda #<cur_line
 	sta code_ptr
-	lda #>test_syntax
+	lda #>cur_line
 	sta code_ptr+1
 	
 	; set the state to NEW TOKEN
@@ -146,7 +148,8 @@ tokenizer_state_jump_table_hi:
 
 	; read the next character (it will still need to be read later)
 	lda (code_ptr)
-	bne :+
+	jsr check_end_of_line
+	bcc :+
 
 	; end of code
 	lda #STATE_END_OF_CODE
@@ -330,7 +333,8 @@ tokenizer_state_jump_table_hi:
 .proc decimal_literal_state
 	; read the next character
 	lda (code_ptr)
-	beq @completed_decimal
+	jsr check_end_of_line
+	bcs @completed_decimal
 
 	; check for ways to end the current token first
 	jsr check_whitespace
@@ -376,7 +380,8 @@ tokenizer_state_jump_table_hi:
 .proc hexadecimal_literal_state
 	; read the next character
 	lda (code_ptr)
-	beq @completed_hexadecimal
+	jsr check_end_of_line
+	bcs @completed_hexadecimal
 
 	jsr check_whitespace
 	bcs @completed_hexadecimal
@@ -439,7 +444,8 @@ tokenizer_state_jump_table_hi:
 .proc binary_literal_state
 	; read the next character
 	lda (code_ptr)
-	beq @completed_binary
+	jsr check_end_of_line
+	bcs @completed_binary
 
 	jsr check_whitespace
 	bcs @completed_binary
@@ -501,7 +507,8 @@ tokenizer_state_jump_table_hi:
 
 	; read the next character
 	lda (code_ptr)
-	beq @completed_operator
+	jsr check_end_of_line
+	bcs @completed_operator
 
 	; increment next character
 	; increment next token character
@@ -531,7 +538,8 @@ tokenizer_state_jump_table_hi:
 .proc directive_state
 	; read the next character
 	lda (code_ptr)
-	beq @completed_directive
+	jsr check_end_of_line
+	bcs @completed_directive
 
 	; increment next character
 	; increment next token character
@@ -589,7 +597,8 @@ tokenizer_state_jump_table_hi:
 
 	; read the next character
 	lda (code_ptr)
-	beq @check_if_op_code
+	jsr check_end_of_line
+	bcs @check_if_op_code
 
 	jsr check_whitespace
 	bcs @check_if_op_code
@@ -658,7 +667,8 @@ tokenizer_state_jump_table_hi:
 
 	; read the next character
 	lda (code_ptr)
-	beq @completed_comment
+	jsr check_end_of_line
+	bcs @completed_comment
 
 	; comments always go until the end of the line
 	jsr check_end_of_line
@@ -690,7 +700,8 @@ tokenizer_state_jump_table_hi:
 
 	; read the next character
 	lda (code_ptr)
-	beq @completed_separator
+	jsr check_end_of_line
+	bcs @completed_separator
 
 	; increment next character
 	; increment next token character
@@ -735,29 +746,4 @@ tokenizer_state_jump_table_hi:
 
 .endscope ; Tokenizer
 
-.segment "DATA"
-
-test_syntax:
-.literal "; THIS IS SAMBLE CODE FOR TESTING",$0d
-.literal $0d
-.literal "; FIRST DEFINE SYMBOLS",$0d
-.literal "SCREEN = $FF5F",$0d
-.literal "BSOUT = $FFD2",$0d
-.literal $0d
-.literal "    ; USE SCREEN MODE 3",$0d
-.literal "    LDA $03",$0d
-.literal "    JSR SCREEN",$0d
-.literal "    LDX #0",$0d
-.literal "PRINTLOOP:",$0d
-.literal "    LDA HELLOSTR,X",$0d
-.literal "    BEQ END",$0d
-.literal "    JSR BSOUT",$0d
-.literal "    INX",$0d
-.literal "    BRA PRINTLOOP",$0d
-.literal "END:",$0d
-.literal "    RTS",$0d
-.literal "HELLOSTR: .BYTE $48, $45, $4C, $4C, $4F, $2C",$0d
-.literal "HELLOSTR: .BYTE $57, $4F, $52, $4C, $4E, $21",$0d,0
-
 .endif ; TOKENIZER_ASM
-
