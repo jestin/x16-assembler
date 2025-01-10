@@ -86,9 +86,8 @@ scratch = u1L
 
 @end_of_file:
 
-	; redirect input back to keyboard
-	ldx #0
-	jsr CHKIN
+	; reset output
+	jsr CLRCHN
 
 	; close the input file
 	lda #1
