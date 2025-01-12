@@ -32,6 +32,8 @@ string_ptr = u0
 scratch = u1L
 
 .proc main
+
+	; Open input file
 	lda #1
 	ldx #8
 	ldy #0
@@ -220,6 +222,10 @@ scratch = u1L
 	beq @token_type_symbol
 	cmp #Tokenizer::TOKEN_TYPE_COMMENT
 	beq @token_type_comment
+	cmp #Tokenizer::TOKEN_TYPE_STARTING_PARENTHESIS
+	beq @token_type_starting_parenthesis
+	cmp #Tokenizer::TOKEN_TYPE_ENDING_PARENTHESIS
+	beq @token_type_ending_parenthesis
 	bra @end
 
 @token_type_opcode:
@@ -264,6 +270,18 @@ scratch = u1L
 	lda #>separator_label
 	sta string_ptr+1
 	bra :+
+@token_type_starting_parenthesis:
+	lda #<starting_parenthesis_label
+	sta string_ptr
+	lda #>starting_parenthesis_label
+	sta string_ptr+1
+	bra :+
+@token_type_ending_parenthesis:
+	lda #<ending_parenthesis_label
+	sta string_ptr
+	lda #>ending_parenthesis_label
+	sta string_ptr+1
+	bra :+
 @token_type_symbol:
 	lda #<symbol_label
 	sta string_ptr
@@ -295,4 +313,6 @@ hexadecimal_literal_label: .literal "HEXADECIMAL LITERAL",0
 binary_literal_label: .literal "BINARY LITERAL",0
 operator_label: .literal "OPERATOR",0
 separator_label: .literal "SEPARATOR",0
+starting_parenthesis_label: .literal "STARTING PARENTHESIS",0
+ending_parenthesis_label: .literal "ENDING PARENTHESIS",0
 symbol_label: .literal "SYMBOL",0

@@ -20,7 +20,7 @@ STATE_OPERATOR = 7
 STATE_DIRECTIVE = 8
 STATE_SYMBOL_OR_OPCODE = 9
 STATE_COMMENT = 10
-STATE_SEPARATOR = 11
+STATE_SINGLE_CHAR_TOKEN = 11
 
 ; token types
 TOKEN_TYPE_OPCODE = 0
@@ -32,6 +32,8 @@ TOKEN_TYPE_OPERATOR = 5
 TOKEN_TYPE_SYMBOL = 6
 TOKEN_TYPE_COMMENT = 7 ; may remove this later
 TOKEN_TYPE_SEPARATOR = 8
+TOKEN_TYPE_STARTING_PARENTHESIS = 9
+TOKEN_TYPE_ENDING_PARENTHESIS = 10
 
 ; store the current state of the state machine
 state: .res 1
@@ -71,7 +73,7 @@ tokenizer_state_jump_table_lo:
 	.byte <directive_state
 	.byte <symbol_or_opcode_state
 	.byte <comment_state
-	.byte <separator_state
+	.byte <single_char_token_state
 
 tokenizer_state_jump_table_hi:
 	.byte >new_token_state
@@ -85,7 +87,7 @@ tokenizer_state_jump_table_hi:
 	.byte >directive_state
 	.byte >symbol_or_opcode_state
 	.byte >comment_state
-	.byte >separator_state
+	.byte >single_char_token_state
 
 
 .proc parse
@@ -197,6 +199,14 @@ tokenizer_state_jump_table_hi:
 	bcc :+
 	bra @separator
 :
+	jsr check_starting_parenthesis
+	bcc :+
+	bra @starting_parenthesis
+:
+	jsr check_ending_parenthesis
+	bcc :+
+	bra @ending_parenthesis
+:
 	jsr check_directive_start
 	bcc :+
 	bra @directive
@@ -248,7 +258,21 @@ tokenizer_state_jump_table_hi:
 	lda #TOKEN_TYPE_SEPARATOR
 	sta (token_type_ptr)
 	
-	lda #STATE_SEPARATOR
+	lda #STATE_SINGLE_CHAR_TOKEN
+	bra @advance_token_type_ptr
+@starting_parenthesis:
+	; add the token type
+	lda #TOKEN_TYPE_STARTING_PARENTHESIS
+	sta (token_type_ptr)
+	
+	lda #STATE_SINGLE_CHAR_TOKEN
+	bra @advance_token_type_ptr
+@ending_parenthesis:
+	; add the token type
+	lda #TOKEN_TYPE_ENDING_PARENTHESIS
+	sta (token_type_ptr)
+	
+	lda #STATE_SINGLE_CHAR_TOKEN
 	bra @advance_token_type_ptr
 @directive:
 	; add the token type
@@ -344,6 +368,9 @@ tokenizer_state_jump_table_hi:
 	bcs @completed_decimal
 
 	jsr check_separator
+	bcs @completed_decimal
+
+	jsr check_ending_parenthesis
 	bcs @completed_decimal
 
 	; we now know that we are consuming the character
@@ -695,13 +722,11 @@ tokenizer_state_jump_table_hi:
 
 .endproc ; comment_state
 
-.proc separator_state
-	; So far, we assume all separators are single characters.  This will change.
-
+.proc single_char_token_state
 	; read the next character
 	lda (code_ptr)
 	jsr check_end_of_line
-	bcs @completed_separator
+	bcs @completed_token
 
 	; increment next character
 	; increment next token character
@@ -709,24 +734,13 @@ tokenizer_state_jump_table_hi:
 	bne :+
 	inc code_ptr+1
 :
-	; check that we are still a number 
-	jsr check_separator
-	bcc @completed_separator
+	jsr add_to_token
 
-	; add to the current token
-	sta (token_char_ptr)
-
-	; increment next token character
-	inc token_char_ptr
-	bne :+
-	inc token_char_ptr+1
-:
-
-@completed_separator:
+@completed_token:
 	lda #STATE_COMPLETED_TOKEN
 	sta state
 	rts
-.endproc
+.endproc ; single_char_token_state
 
 .proc add_to_token
 	; increment current token length

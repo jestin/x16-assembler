@@ -40,6 +40,26 @@ CHARACTER_CHECKERS_ASM = 1
 	rts
 .endproc ;check_end_of_line
 
+.proc check_starting_parenthesis
+	cmp #$28 ; starting parenthesis
+	beq @starting_parenthesis
+	; not the end of a line
+	clc
+@starting_parenthesis:
+	; carry will already be set if we get here
+	rts
+.endproc ;check_starting_parenthesis
+
+.proc check_ending_parenthesis
+	cmp #$29 ; ending parenthesis
+	beq @ending_parenthesis
+	; not the end of a line
+	clc
+@ending_parenthesis:
+	; carry will already be set if we get here
+	rts
+.endproc ;check_ending_parenthesis
+
 .proc check_comment_prefix
 	; check for hex prefix
 	cmp #$3b
