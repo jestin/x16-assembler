@@ -15,9 +15,12 @@
 
 .segment "BSS"
 
+list_filename: .res 22 ; @: + 16 characters + ,S,W
+
 token_type: .res 1
 space_counter: .res 1
 cur_line: .res 256
+location_counter: .res 2
 
 .segment "CODE"
 
@@ -26,29 +29,82 @@ cur_line: .res 256
 hello_asm: .literal "HELLO.ASM"
 end_hello_asm:
 
+hello_lst: .literal "HELLO.LST"
+end_hello_lst:
+
 ; redefinitions
 
 string_ptr = u0
 scratch = u1L
 
+; constants
+
+ASSEMBLY_FILE = 1
+LIST_FILE = 2
+
 .proc main
 
-	; Open input file
-	lda #1
-	ldx #8
-	ldy #0
-	jsr SETLFS
+	; Open input file for reading
 	lda #(end_hello_asm-hello_asm)
 	ldx #<hello_asm
 	ldy #>hello_asm
 	jsr SETNAM
+	lda #ASSEMBLY_FILE
+	ldx #8
+	ldy #0
+	jsr SETLFS
 	jsr OPEN
-	ldx #1
-	jsr CHKIN
+
+	; construct filename
+	; these first two characters cause the file to be overwritten
+	lda #$40 ; @
+	sta list_filename
+	lda #$3a ; :
+	sta list_filename+1
+	ldx #0
+@constuct_list_filename_loop:
+	lda hello_lst,x
+	sta list_filename+2,x
+	inx
+	cpx #(end_hello_lst-hello_lst)+1
+	bne @constuct_list_filename_loop
+	; these last few characters cause the file to be writeable (regardless of
+	; the secondary address used
+	lda #$2c ; ,
+	sta list_filename+1,x
+	inx
+	lda #$53 ; S
+	sta list_filename+1,x
+	inx
+	lda #$2c ; ,
+	sta list_filename+1,x
+	inx
+	lda #$57 ; W
+	sta list_filename+1,x
+
+	; Open list file for writing
+	lda #(end_hello_lst-hello_lst)+6
+	ldx #<list_filename
+	ldy #>list_filename
+	jsr SETNAM
+	lda #LIST_FILE
+	ldx #8
+	ldy #2
+	jsr SETLFS
+	jsr OPEN
+
+	; reset the location counter
+	stz location_counter
+	stz location_counter+1
 
 	ldx #0
 
 @line_loop:
+	jsr CLRCHN
+	ldx #ASSEMBLY_FILE
+	jsr CHKIN
+	ldx #0
+	stz Tokenizer::token_count
 @char_loop:
 	jsr BASIN
 	sta cur_line,x
@@ -79,15 +135,27 @@ scratch = u1L
 	jsr print_string
 	bra @end
 :
-	jsr print_tokens
 
 	; read the status for end of file
 	jsr READST
-	bit #%01000000
+	and #%01000000
 	bne @end_of_file
 
-	ldx #0
-	stz Tokenizer::token_count
+	jsr print_tokens
+
+	; at this point we need to:
+	; 1.  Evaluate any expressions
+	; 2.  Determine byte size of all tokens
+	; 3.  Update the location counter
+	; 4.  Write out line to listing file
+	; 5.  Probably other stuff
+
+	jsr CLRCHN
+
+	ldx #LIST_FILE
+	jsr CHKOUT
+	jsr print_cur_line
+
 	bra @line_loop
 
 @end_of_file:
@@ -96,12 +164,30 @@ scratch = u1L
 	jsr CLRCHN
 
 	; close the input file
-	lda #1
+	lda #ASSEMBLY_FILE
+	jsr CLOSE
+
+	; close the list file
+	lda #LIST_FILE
 	jsr CLOSE
 
 @end:
 	rts
 .endproc
+
+.proc print_cur_line
+	ldx #0
+@print_loop:
+	lda cur_line,x
+	beq @end
+	jsr BSOUT
+	jsr READST
+	inx
+	bra @print_loop
+
+@end:
+	rts
+.endproc ;print_cur_line
 
 .proc print_tokens
 	pha

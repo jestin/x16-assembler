@@ -33,3 +33,6 @@ dump*.bin
 
 # git stats
 stats/*
+
+# test files
+HELLO.LST
