@@ -9,8 +9,10 @@
 
 .include "x16.inc"
 .include "vera.inc"
+.include "macros.inc"
 
 .include "memory.inc"
+.include "file.asm"
 .include "tokenizer.asm"
 
 .segment "BSS"
@@ -29,8 +31,8 @@ location_counter: .res 2
 hello_asm: .literal "HELLO.ASM"
 end_hello_asm:
 
-hello_lst: .literal "HELLO.LST"
-end_hello_lst:
+hello_base: .literal "HELLO",0
+end_hello_base:
 
 ; redefinitions
 
@@ -54,36 +56,22 @@ LIST_FILE = 2
 	ldy #0
 	jsr SETLFS
 	jsr OPEN
+	
+	; load the address of the result file name
+	lda #<list_filename
+	sta u1L
+	lda #>list_filename
+	sta u1H
+	; load the address of the base file name
+	lda #<hello_base
+	sta u0L
+	lda #>hello_base
+	sta u0H
 
-	; construct filename
-	; these first two characters cause the file to be overwritten
-	lda #$40 ; @
-	sta list_filename
-	lda #$3a ; :
-	sta list_filename+1
-	ldx #0
-@constuct_list_filename_loop:
-	lda hello_lst,x
-	sta list_filename+2,x
-	inx
-	cpx #(end_hello_lst-hello_lst)+1
-	bne @constuct_list_filename_loop
-	; these last few characters cause the file to be writeable (regardless of
-	; the secondary address used
-	lda #$2c ; ,
-	sta list_filename+1,x
-	inx
-	lda #$53 ; S
-	sta list_filename+1,x
-	inx
-	lda #$2c ; ,
-	sta list_filename+1,x
-	inx
-	lda #$57 ; W
-	sta list_filename+1,x
+	jsr File::get_list_file_name
 
 	; Open list file for writing
-	lda #(end_hello_lst-hello_lst)+6
+	lda #(end_hello_base-hello_base)+10
 	ldx #<list_filename
 	ldy #>list_filename
 	jsr SETNAM
@@ -138,8 +126,7 @@ LIST_FILE = 2
 
 	; read the status for end of file
 	jsr READST
-	and #%01000000
-	bne @end_of_file
+	pha				; push status word to stack to check later
 
 	jsr print_tokens
 
@@ -156,7 +143,9 @@ LIST_FILE = 2
 	jsr CHKOUT
 	jsr print_cur_line
 
-	bra @line_loop
+	pla				; pull the status word from the last read
+	and #%01000000
+	beq @line_loop
 
 @end_of_file:
 

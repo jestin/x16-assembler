@@ -8,6 +8,8 @@ MAIN = main.asm
 SOURCES = $(MAIN) \
 		  x16.inc \
 		  vera.inc \
+		  macros.inc \
+		  file.asm \
 		  tokenizer.asm \
 		  character_checkers.asm \
 		  opcode_checkers.asm
