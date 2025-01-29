@@ -127,6 +127,11 @@ LIST_FILE = 2
 	; read the status for end of file
 	jsr READST
 	pha				; push status word to stack to check later
+					; in case the file ends on this line
+
+	; if no tokens were read, continue rather than print
+	lda Tokenizer::token_count
+	beq @check_end_of_file
 
 	jsr print_tokens
 
@@ -142,6 +147,8 @@ LIST_FILE = 2
 	ldx #LIST_FILE
 	jsr CHKOUT
 	jsr print_cur_line
+
+@check_end_of_file:
 
 	pla				; pull the status word from the last read
 	and #%01000000
@@ -196,7 +203,7 @@ LIST_FILE = 2
 
 	; print out the current token
 @print_loop:
-	lda (u2),y
+	lda (Tokenizer::token_char_ptr),y
 	beq @end_print_loop
 	jsr BSOUT
 	iny
@@ -236,11 +243,11 @@ LIST_FILE = 2
 	clc
 	iny
 	tya
-	adc u2L
-	sta u2L
+	adc Tokenizer::token_char_ptr
+	sta Tokenizer::token_char_ptr
 	lda #0
-	adc u2H
-	sta u2H
+	adc Tokenizer::token_char_ptr+1
+	sta Tokenizer::token_char_ptr+1
 
 	bra @token_loop
 
