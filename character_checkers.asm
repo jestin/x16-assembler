@@ -22,6 +22,8 @@ CHARACTER_CHECKERS_ASM = 1
 	beq @whitespace
 	cmp #$e0 ; graphic space reversed
 	beq @whitespace
+	cmp #$00 ; null
+	beq @whitespace
 	clc
 	rts
 @whitespace:
