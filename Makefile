@@ -12,7 +12,7 @@ SOURCES = $(MAIN) \
 		  file.asm \
 		  tokenizer.asm \
 		  character_checkers.asm \
-		  opcode_checkers.asm
+		  mnemonic_checkers.asm
 
 all: $(PROG)
 

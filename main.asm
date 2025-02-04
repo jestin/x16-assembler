@@ -286,8 +286,8 @@ LIST_FILE = 2
 .proc print_token_type
 	; print the token type on the same line
 	lda Tokenizer::cur_token_types,x
-	cmp #Tokenizer::TOKEN_TYPE_OPCODE
-	beq @token_type_opcode
+	cmp #Tokenizer::TOKEN_TYPE_MNEMONIC
+	beq @token_type_mnemonic
 	cmp #Tokenizer::TOKEN_TYPE_DIRECTIVE
 	beq @token_type_directive
 	cmp #Tokenizer::TOKEN_TYPE_DECIMAL_LITERAL
@@ -310,10 +310,10 @@ LIST_FILE = 2
 	beq @token_type_ending_parenthesis
 	bra @end
 
-@token_type_opcode:
-	lda #<opcode_label
+@token_type_mnemonic:
+	lda #<mnemonic_label
 	sta string_ptr
-	lda #>opcode_label
+	lda #>mnemonic_label
 	sta string_ptr+1
 	bra :+
 @token_type_directive:
@@ -387,7 +387,7 @@ LIST_FILE = 2
 .segment "DATA"
 
 tokenizer_error_label: .literal $1c,"TOKENIZER ERROR!",$05,$0d,0
-opcode_label: .literal "OPCODE",0
+mnemonic_label: .literal "MNEMONIC",0
 directive_label: .literal "DIRECTIVE",0
 comment_label: .literal "COMMENT",0
 decimal_literal_label: .literal "DECIMAL LITERAL",0

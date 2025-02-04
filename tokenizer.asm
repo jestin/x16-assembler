@@ -4,7 +4,7 @@ TOKENIZER_ASM = 1
 .scope Tokenizer
 
 .include "character_checkers.asm"
-.include "opcode_checkers.asm"
+.include "mnemonic_checkers.asm"
 
 .segment "BSS"
 
@@ -18,12 +18,12 @@ STATE_HEXADECIMAL_LITERAL = 5
 STATE_BINARY_LITERAL = 6
 STATE_OPERATOR = 7
 STATE_DIRECTIVE = 8
-STATE_SYMBOL_OR_OPCODE = 9
+STATE_SYMBOL_OR_MNEMONIC = 9
 STATE_COMMENT = 10
 STATE_SINGLE_CHAR_TOKEN = 11
 
 ; token types
-TOKEN_TYPE_OPCODE = 0
+TOKEN_TYPE_MNEMONIC = 0
 TOKEN_TYPE_DIRECTIVE = 1
 TOKEN_TYPE_DECIMAL_LITERAL = 2
 TOKEN_TYPE_HEXADECIMAL_LITERAL = 3
@@ -71,7 +71,7 @@ tokenizer_state_jump_table_lo:
 	.byte <binary_literal_state
 	.byte <operator_state
 	.byte <directive_state
-	.byte <symbol_or_opcode_state
+	.byte <symbol_or_mnemonic_state
 	.byte <comment_state
 	.byte <single_char_token_state
 
@@ -85,7 +85,7 @@ tokenizer_state_jump_table_hi:
 	.byte >binary_literal_state
 	.byte >operator_state
 	.byte >directive_state
-	.byte >symbol_or_opcode_state
+	.byte >symbol_or_mnemonic_state
 	.byte >comment_state
 	.byte >single_char_token_state
 
@@ -289,8 +289,8 @@ tokenizer_state_jump_table_hi:
 	lda #STATE_COMMENT
 	bra @advance_token_type_ptr
 @alpha:
-	; This could either be a symbol definition, symbol reference, or an opcode
-	lda #STATE_SYMBOL_OR_OPCODE
+	; This could either be a symbol definition, symbol reference, or an mnemonic
+	lda #STATE_SYMBOL_OR_MNEMONIC
 	bra @set_state
 @advance_token_type_ptr:
 	; increment next token character
@@ -619,22 +619,22 @@ tokenizer_state_jump_table_hi:
 	rts
 .endproc ; directive_state
 
-.proc symbol_or_opcode_state
+.proc symbol_or_mnemonic_state
 	; So far, we assume all operators are single characters.  This will change.
 
 	; read the next character
 	lda (code_ptr)
 	jsr check_end_of_line
-	bcs @check_if_op_code
+	bcs @check_if_mnemonic
 
 	jsr check_whitespace
-	bcs @check_if_op_code
+	bcs @check_if_mnemonic
 
 	jsr check_operator
-	bcs @check_if_op_code
+	bcs @check_if_mnemonic
 
 	jsr check_separator
-	bcs @check_if_op_code
+	bcs @check_if_mnemonic
 
 	; increment next character
 	; increment next token character
@@ -650,20 +650,20 @@ tokenizer_state_jump_table_hi:
 
 	; return in the same state
 	rts
-@check_if_op_code:
-	; here is where we check if we are an opcode
+@check_if_mnemonic:
+	; here is where we check if we are an mnemonic
 
-	; opcodes are only ever 3 in length
+	; mnemonics are only ever 3 in length
 	lda cur_token_length
 	cmp #3
 	bne @complete_symbol
 	
-	; this symbol is 3 characters, so check if it is really an opcode
-	jsr check_cur_token_for_opcode
+	; this symbol is 3 characters, so check if it is really an mnemonic
+	jsr check_cur_token_for_mnemonic
 	bcc @complete_symbol
 
-	; we found a matching opcode
-	lda #TOKEN_TYPE_OPCODE
+	; we found a matching mnemonic
+	lda #TOKEN_TYPE_MNEMONIC
 	sta (token_type_ptr)
 	bra @completed
 
@@ -688,7 +688,7 @@ tokenizer_state_jump_table_hi:
 	lda #STATE_ERROR
 	sta state
 	rts
-.endproc ; symbol_or_opcode_state
+.endproc ; symbol_or_mnemonic_state
 
 .proc comment_state
 
