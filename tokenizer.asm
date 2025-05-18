@@ -90,7 +90,7 @@ tokenizer_state_jump_table_hi:
 	.byte >single_char_token_state
 
 
-.proc parse
+.proc tokenize
 
 	; set the token count to 0
 	lda #0

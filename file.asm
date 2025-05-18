@@ -90,7 +90,7 @@ filename_ptr = u1
 ;---------------------------------------------------------------
 ; get_program_file_name
 ;
-; Function:  Constructs a list file name from a base name.
+; Function:  Constructs a program file name from a base name.
 ;            
 ;
 ; Pass:        u0     pointer to zero-terminated base of the filename

@@ -14,6 +14,7 @@
 .include "memory.inc"
 .include "file.asm"
 .include "tokenizer.asm"
+.include "symbol.asm"
 
 .segment "BSS"
 
@@ -23,6 +24,7 @@ token_type: .res 1
 space_counter: .res 1
 cur_line: .res 256
 location_counter: .res 2
+cur_symbol: .res 256
 
 .segment "CODE"
 
@@ -110,7 +112,7 @@ LIST_FILE = 2
 	lda #0
 	sta cur_line,x
 
-	jsr Tokenizer::parse
+	jsr Tokenizer::tokenize
 	
 	; check for error flag
 	beq :+
@@ -133,6 +135,7 @@ LIST_FILE = 2
 	lda Tokenizer::token_count
 	beq @check_end_of_file
 
+	; This is here for debugging only
 	jsr print_tokens
 
 	; at this point we need to:
