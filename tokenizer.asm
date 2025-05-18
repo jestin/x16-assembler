@@ -140,7 +140,7 @@ tokenizer_state_jump_table_hi:
 	; we shouldn't get this far because the end_of_code_state routine should
 	; return from the tokenizer
 
-.endproc
+.endproc ; tokenize
 
 ;------------------------------------------------------------
 ; state procs
@@ -306,7 +306,7 @@ tokenizer_state_jump_table_hi:
 	sta state
 	rts ; exit immediately
 
-.endproc
+.endproc ; new_token_state
 
 .proc complete_token_state
 	; increment token count
@@ -327,7 +327,7 @@ tokenizer_state_jump_table_hi:
 	sta state
 
 	rts
-.endproc
+.endproc ; complete_token_state
 
 .proc end_of_code_state
 	; pull the top of the loop off the stack so that rts returns from the
@@ -340,7 +340,7 @@ tokenizer_state_jump_table_hi:
 
 	; this should now return to whomever called tokenizer
 	rts
-.endproc
+.endproc ; end_of_code_state
 
 .proc error_state
 	; pull the top of the loop off the stack so that rts returns from the
@@ -402,7 +402,7 @@ tokenizer_state_jump_table_hi:
 	sta state
 	rts
 
-.endproc
+.endproc ; decimal_literal_state
 
 .proc hexadecimal_literal_state
 	; read the next character
@@ -466,7 +466,7 @@ tokenizer_state_jump_table_hi:
 	lda #STATE_ERROR
 	sta state
 	rts
-.endproc
+.endproc ; hexadecimal_literal_state
 
 .proc binary_literal_state
 	; read the next character
@@ -527,7 +527,7 @@ tokenizer_state_jump_table_hi:
 	lda #STATE_ERROR
 	sta state
 	rts
-.endproc
+.endproc ; binary_literal_state
 
 .proc operator_state
 	; So far, we assume all operators are single characters.  This will change.
@@ -560,7 +560,7 @@ tokenizer_state_jump_table_hi:
 	lda #STATE_COMPLETED_TOKEN
 	sta state
 	rts
-.endproc
+.endproc ; operator_state
 
 .proc directive_state
 	; read the next character
@@ -719,7 +719,6 @@ tokenizer_state_jump_table_hi:
 	lda #STATE_COMPLETED_TOKEN
 	sta state
 	rts
-
 .endproc ; comment_state
 
 .proc single_char_token_state
