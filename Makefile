@@ -14,7 +14,7 @@ SOURCES = $(MAIN) \
 		  character_checkers.asm \
 		  mnemonic_checkers.asm
 
-all: $(PROG)
+all: clean $(PROG)
 
 $(PROG): $(SOURCES)
 	$(ASSEMBLER6502) $(ASFLAGS) -o $(PROG) $(MAIN)
