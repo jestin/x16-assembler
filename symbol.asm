@@ -63,6 +63,8 @@ symbol_count: .res 1
 
 	; if carry is set we didn't find the symbol so continue
 	bcs :+
+	pla
+	sta $00
 	rts
 :
 
@@ -204,18 +206,18 @@ symbol_count: .res 1
 
 @notfound:
 	; restore stack
+	sec
+
 	pla
 	sta $00
-
-	sec
 	rts
 
 @found:
 	; restore stack
+	clc
+
 	pla
 	sta $00
-
-	clc
 	rts
 
 .endproc
