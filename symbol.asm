@@ -50,6 +50,13 @@ symbol_count: .res 1
 	new_symbol_ptr = u1
 	new_symbol_type_ptr = u2
 
+	; push current bank to stack
+	lda $00
+	pha
+
+	; set bank
+	lda #SYMBOL_TABLE_BANK
+	sta $00
 
 	; check if the symbol exists first
 	jsr find_symbol
@@ -105,6 +112,9 @@ symbol_count: .res 1
 	inc symbol_count
 
 @end:
+	; restore stack
+	pla
+	sta $00
 	rts
 
 .endproc ; add_to_symbol_table
@@ -122,6 +132,14 @@ symbol_count: .res 1
 	; redefinitions
 	cur_symbol_ptr = u0
 	symbol_ptr = u1
+
+	; push current bank to stack
+	lda $00
+	pha
+
+	; set bank
+	lda #SYMBOL_TABLE_BANK
+	sta $00
 
 	; This is just a simple sequential search
 
@@ -185,10 +203,18 @@ symbol_count: .res 1
 @end_search_symbol_loop:
 
 @notfound:
+	; restore stack
+	pla
+	sta $00
+
 	sec
 	rts
 
 @found:
+	; restore stack
+	pla
+	sta $00
+
 	clc
 	rts
 
