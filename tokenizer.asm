@@ -120,10 +120,10 @@ tokenizer_state_jump_table_hi:
 
 @state_loop:
 	nop
-	; Push the address of the state loop to the stack, so that each
-	; state subroutine returns to the top of the loop.  The rts from
-	; each subroutine will pop the value from the stack.  We will only manually
-	; pop it when ending the loop
+	; Push the address of the state loop to the stack, so that each state
+	; subroutine returns to the top of the loop.  The rts from each subroutine
+	; will pop the value from the stack.  We will only manually pop it when
+	; ending the loop
 	lda #>(@state_loop)
 	pha
 	lda #<(@state_loop)

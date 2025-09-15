@@ -11,6 +11,7 @@ SOURCES = $(MAIN) \
 		  macros.inc \
 		  file.asm \
 		  tokenizer.asm \
+		  parser.asm \
 		  character_checkers.asm \
 		  mnemonic_checkers.asm
 

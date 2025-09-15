@@ -1,0 +1,47 @@
+Steps remaining on the first pass:
+
+1.  (future) Evaluate any expressions
+
+This will be useful, but is not necessary for initial functionality.  I will
+revisit this later if I feel that it is needed.  It will likely be a simple
+implementation of the shunting yard algorithm.  I think it will be simpler to
+keep this separate from any other parser that is used for the assembly code.
+This is more a pre-processor, and therefore can be extracted out and even be
+optional.
+
+2.  Determine byte size of all tokens
+
+This is needed so that the list file can be written, which is a critical
+component of a 2-pass assembler.  I need to know how much space is taken up by
+each line of tokens so that I can advance the location counter correctly.
+
+I will need to write a parser for the tokens that have already been tokenized.
+This will be a simple, hand-written parser, rather than one generated with an
+LR parser-generator.  There are really only a handful of patterns that need to
+be detected, so I think that I should be able to do this by hand without too
+much difficulty.  This may lead me to redesign the tokenizer  such that it can
+tell the difference between the definition of a symbol versus the usage of it.
+Right now, those are one and the same, and I'm not sure that it will cut it.
+However, I think the parser could probably handle this on its own, seeing as a
+symbol definition is always followed by a colon or equals sign.  It feels more
+like parsing than tokenizing.
+
+I don't know if a parser will be needed for more than just byte size
+determination, but I suspect it will.
+
+3.  Update the location counter
+
+This is needed, but is really just the culmination of the previous step, but
+must be done once it is known how far to advance it.
+
+4.  Write out line to listing file
+
+This could be considered halfway done, because I am currently writing out a
+listing file without the location counter on the right.  However, this will
+need to be done.  Furthermore, it will need to be done in a machine readable
+way because reading the listing file will be required for the second pass of
+the assembler.
+
+5.  Probably other stuff
+
+This is a placeholder for anything that I forgot

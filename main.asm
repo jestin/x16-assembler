@@ -14,6 +14,7 @@
 .include "memory.inc"
 .include "file.asm"
 .include "tokenizer.asm"
+.include "parser.asm"
 .include "symbol.asm"
 
 .segment "BSS"
@@ -138,8 +139,9 @@ LIST_FILE = 2
 	; This is here for debugging only
 	jsr print_tokens
 
+	; TODO
 	; at this point we need to:
-	; 1.  Evaluate any expressions
+	; 1.  (future) Evaluate any expressions
 	; 2.  Determine byte size of all tokens
 	; 3.  Update the location counter
 	; 4.  Write out line to listing file
